@@ -28,6 +28,8 @@ The lifecycle records generated, extracted, evidence-collected, status, re-evalu
 
 A review pins exact current version IDs. Approving warnings does not convert them to supported claims. Export verifies the approval-version set again. Editorial schedules reference an approved version, and newer versions flag any existing schedule as needing review.
 
+ZIP exports package only those approved versions. Their evidence file includes current-version claims, linked passages, and source metadata, preserving warnings and demo labels. Unlinked passages, earlier drafts, and execution logs are excluded. A manifest maps file hashes and artifact/version IDs for inspection outside the app; it is not a digital signature. See [EXPORTS.md](EXPORTS.md).
+
 ## Demonstration evidence
 
 The EV demonstration seeds two local sample reference documents. It deliberately includes an unsupported range statement and a lifecycle-emission overclaim in the first draft. The quality loop requests a revision, removes those statements, retains the original version and evidence, and asks for human approval. Sample source agreement must not be presented as independent research or an official citation.

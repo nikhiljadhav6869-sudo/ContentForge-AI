@@ -207,7 +207,9 @@ export function Download({
           ? "contentforge-execution.json"
           : format === "json"
             ? "contentforge-campaign.json"
-            : "contentforge-campaign.md";
+            : format === "zip"
+              ? "contentforge-campaign.zip"
+              : "contentforge-campaign.md";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {

@@ -8,9 +8,11 @@ import pytest
 def test_workspace_isolation(client, campaign):
     with TestClient(app) as other:
         assert other.get("/api/workflows/" + campaign["id"]).status_code == 401
+        assert other.get("/api/workflows/" + campaign["id"] + "/export?format=zip").status_code == 401
         assert other.post("/api/auth/demo").status_code == 200
         assert other.get("/api/workflows/" + campaign["id"]).status_code == 404
         assert other.get("/api/workflows/" + campaign["id"] + "/report").status_code == 404
+        assert other.get("/api/workflows/" + campaign["id"] + "/export?format=zip").status_code == 404
         assert (
             other.post(
                 "/api/workflows",
@@ -96,7 +98,7 @@ def test_no_credentials_in_browser_settings(client, monkeypatch):
 
 def test_settings_persist(client):
     prefs = client.get("/api/settings").json()["preferences"]
-    prefs.update(brand_name="Acme", brand_voice="Clear and warm", theme="light", max_revisions=2)
+    prefs.update(brand_name="Acme", brand_voice="Clear and warm", theme="light", max_revisions=2, export_format="zip")
     assert client.put("/api/settings", json=prefs).status_code == 200
     assert client.get("/api/settings").json()["preferences"] == prefs
 

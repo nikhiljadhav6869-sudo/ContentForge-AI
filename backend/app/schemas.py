@@ -69,7 +69,7 @@ class Preferences(BaseModel):
     brand_voice: str = Field(default="Helpful, evidence-led, inclusive. Avoid hype.", max_length=2000)
     default_provider: Literal["demo", "openai", "gemini", "ollama"] = "demo"
     theme: Literal["dark", "light", "system"] = "dark"
-    export_format: Literal["markdown", "json"] = "markdown"
+    export_format: Literal["markdown", "json", "zip"] = "markdown"
     quality_threshold: int = Field(default=80, ge=50, le=100)
     max_revisions: int = Field(default=1, ge=0, le=2)
 

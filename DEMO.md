@@ -14,7 +14,7 @@ The demo is an actual LangGraph execution with persistent events and sample data
 4. Open **Evidence intelligence**. Select a green-underlined claim to see two supporting sample documents. Switch to **Version 1**, then select the lifecycle claim to inspect its contradictory passage. The source cards, relationships, and exact quotes all refer to stored data.
 5. Open **Content studio**. Switch among blog, LinkedIn, Instagram, and YouTube outputs. Compare the two versions. Optionally edit text and save; the new version’s claims become unverified. Select text and add an anchored comment.
 6. Inspect evidence and remaining warnings. Check the acknowledgement box if required, add review notes, and click **Approve current versions**. A human decision resumes the graph and the export agent packages the approved versions.
-7. Download Markdown or JSON and an execution report. The exports disclose demo mode.
+7. Click **Download ZIP package**. Open an approved document in `content/`, inspect `evidence.json`, and show the version IDs and file checksums in `manifest.json`. Markdown, JSON, and the full execution report remain available separately. The exports disclose demo mode.
 8. Visit **Agent analytics** for real measured stage durations and the quality rubric. Add an approved artifact to **Publishing calendar**. Explain that this is an editorial reminder, not automatic social publication.
 
 ## Useful talking points

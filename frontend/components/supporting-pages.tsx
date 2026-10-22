@@ -1081,6 +1081,7 @@ export function SettingsPage() {
               >
                 <option value="markdown">Markdown</option>
                 <option value="json">JSON with audit metadata</option>
+                <option value="zip">ZIP package with evidence</option>
               </select>
             </label>
           </section>

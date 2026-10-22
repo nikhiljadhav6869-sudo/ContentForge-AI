@@ -60,6 +60,7 @@ from .auth import identity, hash_password, check_password, issue_session
 from .sources import store_source, fetch_url, DEMO_SOURCES, MAX_BYTES
 from .gateway import availability
 from .events import emit
+from .exports import campaign_markdown, campaign_zip
 from .workflow import enqueue
 from .traceability import latest_versions, evidence_for_run, new_version, verify_version
 from .prompts import AGENTS
@@ -648,7 +649,7 @@ def export(run_id: str, format: str = "markdown", who=Depends(identity)):
         run = owned_run(db, run_id, who)
         if run.status != "completed":
             raise HTTPException(409, "Approve the current content and wait for export preparation first.")
-        pairs = latest_versions(db, run_id)
+        pairs = sorted(latest_versions(db, run_id), key=lambda pair: (pair[0].platform, pair[0].id))
         approval = db.scalar(
             select(ReviewDecision)
             .where(ReviewDecision.run_id == run_id, ReviewDecision.decision == "approve")
@@ -656,27 +657,51 @@ def export(run_id: str, format: str = "markdown", who=Depends(identity)):
         )
         if not approval or set(approval.version_ids) != {v.id for _, v in pairs}:
             raise HTTPException(409, "Current versions are not approved.")
-        claims = db.scalars(select(FactualClaim).where(FactualClaim.version_id.in_([v.id for _, v in pairs]))).all()
-        disclaimer = (
-            "DEMO: generated from labeled sample fixtures. Not live AI research.\n\n" if run.mode == "demo" else ""
-        )
+        claims = db.scalars(
+            select(FactualClaim).where(FactualClaim.version_id.in_([v.id for _, v in pairs])).order_by(FactualClaim.id)
+        ).all()
+        payload = {
+            "run_id": run_id,
+            "mode": run.mode,
+            "artifacts": [{**serialize(a), "version": serialize(v)} for a, v in pairs],
+            "claims": [serialize(c) for c in claims],
+            "approval": serialize(approval),
+        }
         if format == "json":
-            payload = {
-                "mode": run.mode,
-                "artifacts": [{**serialize(a), "version": serialize(v)} for a, v in pairs],
-                "claims": [serialize(c) for c in claims],
-                "approval": serialize(approval),
-            }
             data, mime, filename = json.dumps(payload, indent=2), "application/json", "contentforge-campaign.json"
         elif format == "markdown":
-            data = disclaimer + "\n\n---\n\n".join(
-                f"# {a.platform.upper()} · v{v.number}\n\n{v.body}" for a, v in pairs
-            )
-            data += "\n\n## Evidence audit\n\n" + "\n".join(f"- [{c.status}] {c.text}" for c in claims)
-            data += "\n\nHuman approval is an editorial decision, not a factual guarantee. See the execution report for source passages and relationships."
-            mime, filename = "text/markdown", "contentforge-campaign.md"
+            data, mime, filename = campaign_markdown(payload), "text/markdown", "contentforge-campaign.md"
+        elif format == "zip":
+            links = db.scalars(
+                select(ClaimEvidence)
+                .where(ClaimEvidence.claim_id.in_([c.id for c in claims]))
+                .order_by(ClaimEvidence.id)
+            ).all()
+            passages = db.scalars(
+                select(SourcePassage)
+                .where(SourcePassage.id.in_([link.passage_id for link in links]))
+                .order_by(SourcePassage.id)
+            ).all()
+            sources = db.scalars(
+                select(SourceDocument)
+                .where(SourceDocument.id.in_([p.source_id for p in passages]))
+                .order_by(SourceDocument.id)
+            ).all()
+            evidence = {
+                "run_id": run_id,
+                "mode": run.mode,
+                "approved_version_ids": sorted(approval.version_ids),
+                "claims": payload["claims"],
+                "links": [serialize(link) for link in links],
+                "passages": [serialize(passage) for passage in passages],
+                "sources": [
+                    {key: value for key, value in serialize(source).items() if key not in ("text", "workspace_id")}
+                    for source in sources
+                ],
+            }
+            data, mime, filename = campaign_zip(payload, evidence), "application/zip", "contentforge-campaign.zip"
         else:
-            raise HTTPException(400, "Choose markdown or json.")
+            raise HTTPException(400, "Choose markdown, json, or zip.")
     return Response(data, media_type=mime, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 

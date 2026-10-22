@@ -163,12 +163,10 @@ function RichEditor({
     immediatelyRender: false,
     content: {
       type: "doc",
-      content: version.body
-        .split("\n\n")
-        .map((text) => ({
-          type: "paragraph",
-          content: text ? [{ type: "text", text }] : [],
-        })),
+      content: version.body.split("\n\n").map((text) => ({
+        type: "paragraph",
+        content: text ? [{ type: "text", text }] : [],
+      })),
     },
     onUpdate: ({ editor }) =>
       onChange(editor.getText({ blockSeparator: "\n\n" })),
@@ -435,10 +433,13 @@ export default function ContentStudio({ id }: { id: string | null }) {
                 <div>
                   <h3>Approved and ready for your next step.</h3>
                   <p>
-                    Download the campaign or schedule it in your editorial
-                    calendar.
+                    Download approved drafts and their evidence as a ZIP
+                    package, or schedule them in your editorial calendar.
                   </p>
                 </div>
+                <DownloadButton runId={id} format="zip">
+                  Download ZIP package
+                </DownloadButton>
                 <DownloadButton runId={id} format="json">
                   Export JSON
                 </DownloadButton>

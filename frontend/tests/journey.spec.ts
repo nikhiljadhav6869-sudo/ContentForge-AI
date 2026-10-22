@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test("complete campaign: graph, evidence, edit, approval, export, calendar", async ({
   page,
@@ -87,6 +88,14 @@ test("complete campaign: graph, evidence, edit, approval, export, calendar", asy
     .click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("contentforge-campaign.md");
+  const packagePromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download ZIP package", exact: true })
+    .click();
+  const packageDownload = await packagePromise;
+  expect(packageDownload.suggestedFilename()).toBe("contentforge-campaign.zip");
+  const packageBytes = await readFile((await packageDownload.path())!);
+  expect(packageBytes.subarray(0, 4).toString("hex")).toBe("504b0304");
   await page.goto("/calendar");
   await page.getByLabel("Approved campaign").selectOption(runId);
   await page.getByLabel("Content format").selectOption({ label: "Blog" });
@@ -105,9 +114,19 @@ test("complete campaign: graph, evidence, edit, approval, export, calendar", asy
   ).toBeVisible();
   await page.goto("/settings");
   await page.getByLabel("Brand name").fill("Evidence Studio");
+  await page.getByLabel("Preferred export format").selectOption("zip");
   await page.getByRole("button", { name: "Save preferences" }).click();
   await page.reload();
   await expect(page.getByLabel("Brand name")).toHaveValue("Evidence Studio");
+  await expect(page.getByLabel("Preferred export format")).toHaveValue("zip");
+  await page.goto(`/content/${runId}`);
+  const preferredDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export campaign", exact: true })
+    .click();
+  expect((await preferredDownload).suggestedFilename()).toBe(
+    "contentforge-campaign.zip",
+  );
   expect(errors).toEqual([]);
 });
 

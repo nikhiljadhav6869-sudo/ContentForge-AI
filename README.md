@@ -34,7 +34,7 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - **Agent Control Center:** interactive XYFlow graph, actual backend events, stage inputs/outputs, decision summaries, usage metrics, retry and cancellation controls, persistent event sequence replay.
 - **Evidence Intelligence Studio:** source library, highlighted claims, supporting and contradictory passages, many-to-many claim/source links, human evidence assessment, and immutable version history.
 - **Ten specialist roles:** supervisor, research, strategy, writer, fact checker, editor, brand guardian, SEO, quality, and export. Research and strategy run in parallel. Quality feedback is bounded. Export is gated by a durable human-approval interrupt.
-- **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; text editing, comparisons, anchored comments, revision requests, and Markdown/JSON exports.
+- **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; text editing, comparisons, anchored comments, revision requests, and Markdown/JSON exports. ZIP packages bundle approved documents, linked evidence, approval records, and file checksums.
 - Dashboard, analytics, editorial calendar, brand preferences, dark/light/system themes, command palette, responsive navigation, authentication, and workspace ownership checks.
 - Live API connection status, outage recovery, and campaign selection scoped to the signed-in workspace.
 - PostgreSQL/SQLite persistence, Alembic migrations, Redis/RQ worker, local fallback queue, Docker configuration, tests, and CI.
@@ -74,6 +74,7 @@ See [TESTING.md](TESTING.md) for exact coverage and recorded outcomes. See [DEMO
 - [Architecture and data flow](ARCHITECTURE.md)
 - [Agent contracts and development instructions](AGENTS.md)
 - [Evidence semantics and traceability](TRACEABILITY.md)
+- [Downloadable campaign packages](EXPORTS.md)
 - [Deployment and operations](DEPLOYMENT.md)
 - [Tests and validation](TESTING.md)
 - [College demonstration](DEMO.md)

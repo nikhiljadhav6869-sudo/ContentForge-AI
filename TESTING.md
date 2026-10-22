@@ -5,15 +5,15 @@ Validated on 22 October 2026 in the cloud workspace. These results describe this
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 26 passed |
+| Backend, `.venv/bin/pytest -q` | 31 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 7 passed in 1.9 minutes, including connection and account recovery |
-| PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, approval and export |
-| SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, approval and export |
+| Playwright against the production web/API containers | 7 passed in 1.7 minutes, including ZIP downloads, saved export preferences, and account recovery |
+| PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
+| SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 
 ## Repeat the checks
 
@@ -50,6 +50,8 @@ Backend tests exercise the complete demo graph, parallel branch join, evidence/v
 Browser tests exercise the graph inspector, disputed evidence, editing and comments, approval, download, calendar, analytics, preferences, project/campaign creation, mobile navigation, responsive views at 390/768/1440 pixels, and SSE replay from a saved sequence cursor.
 
 Recovery tests exercise failed health checks and successful retries, browser offline/reconnect events, temporary identity lookup failures, guest-session protection during an outage, failed sign-out, and switching to a new account without carrying over a campaign selection. Failure responses are intercepted in the browser; normal requests use the running API.
+
+Export tests inspect ZIP contents, manifest checksums, reproducible downloads, Unicode text, safe archive paths, ownership, approved-version enforcement across all formats, and evidence relationships restricted to approved versions. The browser journey also downloads ZIP files and verifies that the saved export preference is used.
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 
