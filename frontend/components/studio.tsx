@@ -120,10 +120,8 @@ export default function Studio() {
     const parts = pathname.split("/");
     if (["control", "evidence", "content"].includes(parts[1]) && parts[2]) {
       setRunId(parts[2]);
-    } else if (
-      runs.data &&
-      !runs.data.some((run) => run.id === useUI.getState().runId)
-    ) {
+    } else if (runs.data && !useUI.getState().runId) {
+      // The recent list is capped; a campaign opened from history may be older.
       setRunId(runs.data[0]?.id ?? null);
     }
   }, [pathname, setRunId, bindWorkspace, me.data?.workspace_id, runs.data]);

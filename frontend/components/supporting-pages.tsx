@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -64,6 +64,7 @@ import {
   useRun,
 } from "./shared";
 import { ReviewPanel } from "./content-studio";
+import CampaignLibrary from "./campaign-library";
 const chartTheme = {
   background: "#192235",
   border: "1px solid #2b3850",
@@ -85,7 +86,6 @@ function useRuns() {
 export function Dashboard() {
   const router = useRouter();
   const query = useAnalytics();
-  const runs = useRuns();
   const [busy, setBusy] = useState(false);
   if (query.isLoading) return <Loading />;
   if (query.error)
@@ -192,66 +192,9 @@ export function Dashboard() {
         ))}
       </div>
       <div className="dashboard-columns">
-        <section className="panel recent-runs">
-          <div className="section-title">
-            <h2>Recent workflows</h2>
-            <span className="count">{a.runs}</span>
-            <button onClick={() => router.push("/workflows/new")}>
-              New campaign
-              <Plus size={13} />
-            </button>
-          </div>
-          {runs.data?.length ? (
-            <div className="run-table">
-              <div className="table-heading">
-                <span>CAMPAIGN</span>
-                <span>STATUS</span>
-                <span>CREATED</span>
-                <span />
-              </div>
-              {runs.data.slice(0, 6).map((r) => (
-                <button
-                  className="run-row"
-                  key={r.id}
-                  onClick={() => router.push(`/control/${r.id}`)}
-                >
-                  <span>
-                    <span className="run-icon">
-                      <Layers size={17} />
-                    </span>
-                    <span>
-                      <strong>{r.title}</strong>
-                      <small>
-                        {r.mode === "demo"
-                          ? "Demo campaign"
-                          : `${r.mode} · live model`}
-                      </small>
-                    </span>
-                  </span>
-                  <StatusBadge status={r.status} />
-                  <time>
-                    {new Date(r.created_at).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </time>
-                  <ArrowUpRight size={15} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <Empty
-              title="Start something worth sharing"
-              description="Create your first campaign or run the demonstration to see the full journey."
-              action={
-                <Button onClick={demo} disabled={busy}>
-                  Explore the demo
-                  <ArrowRight size={14} />
-                </Button>
-              }
-            />
-          )}
-        </section>
+        <Suspense fallback={<Loading />}>
+          <CampaignLibrary onDemo={demo} busy={busy} />
+        </Suspense>
         <section className="panel approval-summary">
           <span className="metric-icon amber">
             <ShieldCheck size={22} />

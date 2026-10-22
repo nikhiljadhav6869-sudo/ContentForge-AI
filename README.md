@@ -37,7 +37,14 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; text editing, comparisons, anchored comments, revision requests, and Markdown/JSON exports. ZIP packages bundle approved documents, linked evidence, approval records, and file checksums.
 - Dashboard, analytics, editorial calendar, brand preferences, dark/light/system themes, command palette, responsive navigation, authentication, and workspace ownership checks.
 - Live API connection status, outage recovery, and campaign selection scoped to the signed-in workspace.
+- **Campaign library:** title search, status filters, newest/oldest ordering, and server-side pagination across your campaign history. Filters stay in the page URL for reloads and browser navigation.
 - PostgreSQL/SQLite persistence, Alembic migrations, Redis/RQ worker, local fallback queue, Docker configuration, tests, and CI.
+
+## Find a campaign
+
+Open **Overview → Campaign library**. Enter part of a campaign title and press **Search**, then choose a status or creation order. **Active** includes queued and running workflows; **Needs attention** includes failed and interrupted workflows. Use **Previous** and **Next** to browse older results, and click a campaign to open its control center. **Clear filters** restores the full list.
+
+The library refreshes every 15 seconds while visible and also has a manual refresh button. Searches and totals are scoped to your signed-in workspace. Saved page URLs retain filters; opening a URL in another account searches that account's own campaigns.
 
 ## Connect live models
 

@@ -25,6 +25,13 @@ export type Artifact = {
   title: string;
   platform: string;
 };
+export type CampaignPage = {
+  items: Run[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+};
 export type Version = {
   id: string;
   artifact_id: string;

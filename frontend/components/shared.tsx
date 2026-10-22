@@ -143,6 +143,9 @@ export function RunPicker({
       <option value="" disabled>
         Select a campaign
       </option>
+      {selected && !data.some((run) => run.id === selected) && (
+        <option value={selected}>Selected campaign from history</option>
+      )}
       {data.map((r) => (
         <option key={r.id} value={r.id}>
           {r.title.slice(0, 55)} · {label(r.status)}

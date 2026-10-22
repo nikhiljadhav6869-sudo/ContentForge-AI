@@ -16,7 +16,7 @@ flowchart LR
   M --> O[OpenAI-compatible / Gemini / Ollama]
 ```
 
-The frontend uses App Router, TypeScript, Tailwind, shadcn-style Radix primitives, Motion, XYFlow, Recharts, TanStack Query, Zustand, and Tiptap. TanStack Query owns server data. Zustand stores only the selected run and sidebar preference. Persisted events invalidate the relevant query; browser timers never synthesize agent completion.
+The frontend uses App Router, TypeScript, Tailwind, shadcn-style Radix primitives, Motion, XYFlow, Recharts, TanStack Query, Zustand, and Tiptap. TanStack Query owns server data. Zustand stores the workspace-bound selected run and sidebar preference. Persisted events invalidate the relevant query; browser timers never synthesize agent completion.
 
 The backend uses FastAPI, Pydantic, SQLAlchemy, Alembic, LangGraph, and an RQ worker. Compose runs PostgreSQL and Redis. Local development substitutes SQLite and a bounded thread pool without changing the graph or API.
 
@@ -48,6 +48,8 @@ The graph uses persistent checkpointers, conditional edges, a maximum of two aut
 Normalized SQLAlchemy tables cover users, workspaces, sessions, projects, requests, runs, events, executions, sources, passages, artifacts, versions, claims, evidence links, quality evaluations, reviews, comments, publishing jobs, and usage records. Every workspace belongs to one account in this version; shared-workspace membership and enterprise roles are not implemented.
 
 Artifacts retain immutable versions. Claims point to a particular version and character span. Evidence links point to persisted passages, which point to source documents with content hashes. Execution IDs connect generated artifacts and evaluated claims to responsible agents. Reviews pin the exact approved version IDs. Calendar entries pin the approved artifact version.
+
+The campaign library uses `GET /api/campaigns` with `q`, `status`, `sort`, `page`, and `page_size`. SQL applies workspace ownership before counting or paging results; literal search characters are escaped. Creation time plus run ID provides a stable ordering for tied timestamps. The response includes items, total count, page size, page number, and page count. The older `/api/workflows` array remains capped at 100 for recent-item pickers; the library can navigate beyond that window, and opening an older campaign preserves its workspace-bound selection.
 
 ## Events and reconnection
 

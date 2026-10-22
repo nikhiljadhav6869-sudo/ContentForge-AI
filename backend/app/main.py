@@ -12,7 +12,8 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File
+from typing import Literal
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pypdf import PdfReader
@@ -410,6 +411,43 @@ def workflows(who=Depends(identity)):
             .limit(100)
         ).all()
         return [{**serialize(r), "title": db.get(Project, r.project_id).name} for r in runs]
+
+
+@app.get("/api/campaigns")
+def campaign_library(
+    q: str = Query(default="", max_length=180),
+    status: Literal["all", "active", "awaiting_approval", "completed", "attention", "cancelled", "rejected"] = "all",
+    sort: Literal["newest", "oldest"] = "newest",
+    page: int = Query(default=1, ge=1, le=1_000_000),
+    page_size: int = Query(default=6, ge=1, le=50),
+    who=Depends(identity),
+):
+    filters = [Project.workspace_id == who["workspace_id"]]
+    if q.strip():
+        filters.append(Project.name.icontains(q.strip(), autoescape=True))
+    groups = {"active": ["queued", "running"], "attention": ["failed", "interrupted"]}
+    if status != "all":
+        filters.append(WorkflowRun.status.in_(groups.get(status, [status])))
+    order = (WorkflowRun.created_at, WorkflowRun.id)
+    if sort == "newest":
+        order = tuple(column.desc() for column in order)
+    with Session() as db:
+        total = db.scalar(select(func.count()).select_from(WorkflowRun).join(Project).where(*filters))
+        rows = db.execute(
+            select(WorkflowRun, Project.name)
+            .join(Project)
+            .where(*filters)
+            .order_by(*order)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        ).all()
+        return {
+            "items": [{**serialize(run), "title": title} for run, title in rows],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "pages": (total + page_size - 1) // page_size,
+        }
 
 
 @app.get("/api/workflows/{run_id}")

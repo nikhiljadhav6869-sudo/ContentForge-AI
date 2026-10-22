@@ -5,13 +5,13 @@ Validated on 22 October 2026 in the cloud workspace. These results describe this
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 31 passed |
+| Backend, `.venv/bin/pytest -q` | 43 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 7 passed in 1.7 minutes, including ZIP downloads, saved export preferences, and account recovery |
+| Playwright against the production web/API containers | 9 passed across final validation runs: 7 workflow/recovery checks plus 2 campaign-library checks |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 | SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 
@@ -52,6 +52,10 @@ Browser tests exercise the graph inspector, disputed evidence, editing and comme
 Recovery tests exercise failed health checks and successful retries, browser offline/reconnect events, temporary identity lookup failures, guest-session protection during an outage, failed sign-out, and switching to a new account without carrying over a campaign selection. Failure responses are intercepted in the browser; normal requests use the running API.
 
 Export tests inspect ZIP contents, manifest checksums, reproducible downloads, Unicode text, safe archive paths, ownership, approved-version enforcement across all formats, and evidence relationships restricted to approved versions. The browser journey also downloads ZIP files and verifies that the saved export preference is used.
+
+Campaign library tests seed 125 persisted workflows and verify pagination beyond the legacy picker limit, stable ordering when timestamps tie, literal wildcard searches, combined status/title filters, input bounds, and workspace isolation for both results and counts. Browser coverage checks paging, search, status and sort filters, reload/back navigation, empty/out-of-range pages, mobile layout, and retry after an API error.
+
+The final campaign-library browser run also verifies that a selected campaign remains available when absent from the recent-items picker. The mobile width check waits for the responsive sidebar transition to settle before measuring overflow.
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 
