@@ -29,7 +29,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, post, type Run, type Settings } from "@/lib/api";
+import { api, post, ApiError, type Run, type Settings } from "@/lib/api";
 import { useUI } from "@/lib/store";
 import { Button } from "./ui/button";
 import { Loading, ErrorState } from "./shared";
@@ -45,6 +45,7 @@ import CreateWorkflow from "./create-workflow";
 import ControlCenter from "./control-center";
 import EvidenceStudio from "./evidence-studio";
 import ContentStudio from "./content-studio";
+import ServiceStatus from "./service-status";
 const nav = [
   { name: "Overview", path: "/dashboard", icon: LayoutDashboard },
   { name: "Workflow studio", path: "/workflows/new", icon: Workflow },
@@ -75,13 +76,24 @@ export default function Studio() {
   const [mobile, setMobile] = useState(false);
   const [command, setCommand] = useState(false);
   const [search, setSearch] = useState("");
-  const { collapsed, toggleSidebar, runId, setRunId } = useUI();
+  const {
+    collapsed,
+    toggleSidebar,
+    runId: storedRunId,
+    workspaceId,
+    bindWorkspace,
+    resetWorkspace,
+    setRunId,
+  } = useUI();
+  const [signingOut, setSigningOut] = useState(false);
   const isLanding = pathname === "/";
   const me = useQuery({
     queryKey: ["me"],
-    queryFn: () => api<{ name: string; workspace: string }>("/me"),
+    queryFn: () =>
+      api<{ name: string; workspace: string; workspace_id: string }>("/me"),
     enabled: !isLanding,
   });
+  const runId = workspaceId === me.data?.workspace_id ? storedRunId : null;
   const runs = useQuery({
     queryKey: ["runs"],
     queryFn: () => api<Run[]>("/workflows"),
@@ -103,14 +115,21 @@ export default function Studio() {
     return () => window.removeEventListener("keydown", listener);
   }, []);
   useEffect(() => {
-    setMobile(false);
+    if (!me.data?.workspace_id) return;
+    bindWorkspace(me.data.workspace_id);
     const parts = pathname.split("/");
-    if (["control", "evidence", "content"].includes(parts[1]) && parts[2])
+    if (["control", "evidence", "content"].includes(parts[1]) && parts[2]) {
       setRunId(parts[2]);
-  }, [pathname, setRunId]);
+    } else if (
+      runs.data &&
+      !runs.data.some((run) => run.id === useUI.getState().runId)
+    ) {
+      setRunId(runs.data[0]?.id ?? null);
+    }
+  }, [pathname, setRunId, bindWorkspace, me.data?.workspace_id, runs.data]);
   useEffect(() => {
-    if (!runId && runs.data?.length) setRunId(runs.data[0].id);
-  }, [runs.data, runId, setRunId]);
+    setMobile(false);
+  }, [pathname]);
   useEffect(() => {
     const theme = preferences.data?.preferences.theme || "dark";
     const media = window.matchMedia("(prefers-color-scheme: light)");
@@ -137,6 +156,12 @@ export default function Studio() {
     return (
       <div className="standalone">
         <Loading />
+      </div>
+    );
+  if (me.error && !(me.error instanceof ApiError && me.error.status === 401))
+    return (
+      <div className="standalone">
+        <ErrorState error={me.error} retry={() => void me.refetch()} />
       </div>
     );
   if (me.error)
@@ -240,10 +265,19 @@ export default function Studio() {
           </Link>
           <button
             className="user-card"
+            disabled={signingOut}
             onClick={async () => {
-              await post("/auth/logout");
-              client.clear();
-              router.push("/");
+              setSigningOut(true);
+              try {
+                await post("/auth/logout");
+                resetWorkspace();
+                client.clear();
+                router.push("/");
+              } catch (error) {
+                toast.error((error as Error).message);
+              } finally {
+                setSigningOut(false);
+              }
             }}
             title="Sign out"
           >
@@ -284,10 +318,7 @@ export default function Studio() {
               <span>Quick search</span>
               <kbd>⌘ K</kbd>
             </button>
-            <span className="system-status">
-              <span />
-              System online
-            </span>
+            <ServiceStatus />
             <button
               className="icon-button"
               aria-label="Open pending approvals"

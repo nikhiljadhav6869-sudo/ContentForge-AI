@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, post, label, type Detail, type Run } from "@/lib/api";
+import { api, post, label, ApiError, type Detail, type Run } from "@/lib/api";
 import { useUI } from "@/lib/store";
 import { Button } from "./ui/button";
 export function StatusBadge({ status }: { status: string }) {
@@ -226,8 +226,10 @@ export function Download({
 export async function startDemo() {
   try {
     await api("/me");
-  } catch {
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401) throw error;
     await post("/auth/demo");
+    useUI.getState().resetWorkspace();
   }
   return post<{ id: string }>("/workflows", {
     prompt:

@@ -11,7 +11,7 @@ Validated on 22 October 2026 in the cloud workspace. These results describe this
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 3 passed in 1.5 minutes |
+| Playwright against the production web/API containers | 7 passed in 1.9 minutes, including connection and account recovery |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, approval and export |
 | SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, approval and export |
 
@@ -48,6 +48,8 @@ python3 scripts/smoke.py --base-url http://localhost:3000
 Backend tests exercise the complete demo graph, parallel branch join, evidence/version integrity, source relationships, event sequencing, editing and stale versions, human approval/revision/rejection, cancellation, scheduling, comments, analytics, checkpoint recovery, bounded retries, ownership, cross-origin writes, upload/body limits, provider contracts, and error redaction. Provider adapters use mocked HTTP responses, including transient failure retries. Conservative evidence matching includes a negated-sentence regression.
 
 Browser tests exercise the graph inspector, disputed evidence, editing and comments, approval, download, calendar, analytics, preferences, project/campaign creation, mobile navigation, responsive views at 390/768/1440 pixels, and SSE replay from a saved sequence cursor.
+
+Recovery tests exercise failed health checks and successful retries, browser offline/reconnect events, temporary identity lookup failures, guest-session protection during an outage, failed sign-out, and switching to a new account without carrying over a campaign selection. Failure responses are intercepted in the browser; normal requests use the running API.
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 

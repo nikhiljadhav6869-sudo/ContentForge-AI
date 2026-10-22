@@ -192,6 +192,16 @@ export type Schedule = {
   scheduled_at: string;
   status: string;
 };
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {},
@@ -208,10 +218,11 @@ export async function api<T>(
     const data = await response
       .json()
       .catch(() => ({ detail: "Request failed." }));
-    throw new Error(
+    throw new ApiError(
       typeof data.detail === "string"
         ? data.detail
         : "Check the form fields and try again.",
+      response.status,
     );
   }
   return response.json();

@@ -615,12 +615,21 @@ small {
   align-items: center;
   gap: 6px;
 }
-.system-status > span {
+.system-status > i {
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--teal);
   box-shadow: 0 0 5px #42d6c455;
+}
+.system-status[data-state="checking"] > i {
+  background: var(--amber);
+  box-shadow: none;
+}
+.system-status[data-state="unavailable"] > i,
+.system-status[data-state="offline"] > i {
+  background: var(--red);
+  box-shadow: none;
 }
 .mobile-toggle {
   display: none !important;

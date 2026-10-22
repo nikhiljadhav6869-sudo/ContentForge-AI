@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { post } from "@/lib/api";
+import { useUI } from "@/lib/store";
 import { Logo } from "./studio";
 import { Button } from "./ui/button";
 import { startDemo } from "./shared";
@@ -48,6 +49,7 @@ export default function Landing() {
     setBusy(true);
     try {
       await post(`/auth/${auth}`, data);
+      useUI.getState().resetWorkspace();
       client.clear();
       router.push("/dashboard");
     } catch (error) {

@@ -2,6 +2,8 @@
 
 Use the existing checkout. Cloud tasks already have isolated environments; do not create worktrees unless the user explicitly asks.
 
+Use the repository-local Git author configuration when committing the user's project work. Do not override it with a generic agent identity. Keep each commit focused on a meaningful, validated change.
+
 ## Commands
 
 - Install from repository root: `./scripts/install.sh`.

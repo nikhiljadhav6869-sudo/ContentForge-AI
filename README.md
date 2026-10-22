@@ -36,6 +36,7 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - **Ten specialist roles:** supervisor, research, strategy, writer, fact checker, editor, brand guardian, SEO, quality, and export. Research and strategy run in parallel. Quality feedback is bounded. Export is gated by a durable human-approval interrupt.
 - **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; text editing, comparisons, anchored comments, revision requests, and Markdown/JSON exports.
 - Dashboard, analytics, editorial calendar, brand preferences, dark/light/system themes, command palette, responsive navigation, authentication, and workspace ownership checks.
+- Live API connection status, outage recovery, and campaign selection scoped to the signed-in workspace.
 - PostgreSQL/SQLite persistence, Alembic migrations, Redis/RQ worker, local fallback queue, Docker configuration, tests, and CI.
 
 ## Connect live models
