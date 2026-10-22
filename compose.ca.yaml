@@ -1,0 +1,15 @@
+# Optional corporate/cloud build trust bundle. Never disables TLS verification.
+# CONTENTFORGE_BUILD_CA=/path/to/trusted-ca-bundle.pem docker compose -f compose.yaml -f compose.ca.yaml build
+services:
+  api:
+    build:
+      secrets: [build_ca]
+  worker:
+    build:
+      secrets: [build_ca]
+  web:
+    build:
+      secrets: [build_ca]
+secrets:
+  build_ca:
+    file: ${CONTENTFORGE_BUILD_CA:?Set the path to your trusted CA bundle}

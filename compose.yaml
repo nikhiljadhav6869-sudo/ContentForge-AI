@@ -1,0 +1,84 @@
+name: contentforge
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: contentforge
+      POSTGRES_DB: contentforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run python3 scripts/configure.py first}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U contentforge -d contentforge]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --appendonly, 'yes']
+    volumes: [redis-data:/data]
+    ports: ["127.0.0.1:${REDIS_PORT:-6379}:6379"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  api:
+    build: ./backend
+    environment: &backend-env
+      DATABASE_URL: postgresql+psycopg://contentforge:${POSTGRES_PASSWORD}@postgres:5432/contentforge
+      CHECKPOINT_URL: postgresql://contentforge:${POSTGRES_PASSWORD}@postgres:5432/contentforge
+      REDIS_URL: redis://redis:6379/0
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      DEMO_AUTH: ${DEMO_AUTH:-true}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      SOURCE_HOSTS: ${SOURCE_HOSTS:-www.iea.org,afdc.energy.gov,www.energy.gov}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: [backend-data:/app/.data]
+    ports: ["127.0.0.1:${API_PORT:-8000}:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+  worker:
+    build: ./backend
+    command: [python, -m, app.worker]
+    environment: *backend-env
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: [backend-data:/app/.data]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  web:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://api:8000
+    ports: ["127.0.0.1:${WEB_PORT:-3000}:3000"]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+volumes:
+  postgres-data:
+  redis-data:
+  backend-data:
