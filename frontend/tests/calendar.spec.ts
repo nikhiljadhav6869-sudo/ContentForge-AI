@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test.use({ timezoneId: "Asia/Kolkata" });
 
@@ -158,4 +159,78 @@ test("reschedule preserves edits after errors and rejects a stale editor", async
   await expect(card.getByLabel("Reschedule blog date")).toHaveValue(
     await localInput(page, latest.scheduled_at),
   );
+});
+
+test("download calendar snapshots, retry a failed download, and reflect a moved reminder", async ({
+  page,
+}) => {
+  const job = await createReminder(page);
+  await page.goto("/calendar");
+  const card = page.getByRole("article", { name: /Blog reminder:/ });
+  let downloads = 0;
+  page.on("download", () => downloads++);
+  await page.route(`**/api/calendar/${job.id}/export`, (route) =>
+    route.fulfill({
+      status: 503,
+      json: { detail: "Calendar download temporarily unavailable" },
+    }),
+  );
+  await card
+    .getByRole("button", { name: "Download .ics", exact: true })
+    .click();
+  await expect(card.getByRole("alert")).toHaveText(
+    "Calendar download temporarily unavailable",
+  );
+  expect(downloads).toBe(0);
+  await page.unroute(`**/api/calendar/${job.id}/export`);
+  const firstDownload = page.waitForEvent("download");
+  await card
+    .getByRole("button", { name: "Download .ics", exact: true })
+    .click();
+  const file = await firstDownload;
+  expect(file.suggestedFilename()).toBe(`contentforge-reminder-${job.id}.ics`);
+  const original = (await readFile((await file.path())!, "utf8")).replaceAll(
+    "\r\n ",
+    "",
+  );
+  expect(original).toContain("BEGIN:VCALENDAR\r\nVERSION:2.0");
+  expect(original).toContain("SUMMARY:[DEMO]");
+  expect(original).toContain(job.version_id);
+  expect(original).toContain(`UID:${job.id}@contentforge.local`);
+  const movedTo = new Date(Date.now() + 5 * 86400000);
+  movedTo.setUTCSeconds(0, 0);
+  const moved = await page.request.patch(`/api/calendar/${job.id}`, {
+    data: {
+      expected_scheduled_at: job.scheduled_at,
+      scheduled_at: movedTo.toISOString(),
+    },
+  });
+  expect(moved.ok()).toBeTruthy();
+  const secondDownload = page.waitForEvent("download");
+  await card
+    .getByRole("button", { name: "Download .ics", exact: true })
+    .click();
+  const updatedFile = await secondDownload;
+  const updated = (
+    await readFile((await updatedFile.path())!, "utf8")
+  ).replaceAll("\r\n ", "");
+  const utc = movedTo.toISOString().replace(/[-:]/g, "").replace(".000", "");
+  expect(updated).toContain(`DTSTART:${utc}`);
+  expect(updated).toContain(`UID:${job.id}@contentforge.local`);
+  await expect(
+    card.getByText(/Later changes do not sync automatically/),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await expect(
+    card.getByRole("button", { name: "Download .ics", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/calendar-download-mobile.png",
+    fullPage: true,
+  });
 });

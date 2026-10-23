@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Clock3, Trash2 } from "lucide-react";
+import { Clock3, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, label, type Schedule } from "@/lib/api";
 import { Button } from "./ui/button";
@@ -83,6 +83,30 @@ export default function ReminderCard({
       setBusy(false);
     }
   }
+  async function download() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/calendar/${job.id}/export`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(
+          body.detail ||
+            "The calendar file could not be downloaded. Try again.",
+        );
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `contentforge-reminder-${job.id}.ics`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <article
       className="reminder-card"
@@ -145,10 +169,32 @@ export default function ReminderCard({
           </div>
         </form>
       ) : (
-        <Button size="sm" variant="secondary" onClick={edit} disabled={busy}>
-          <Clock3 size={13} />
-          Reschedule
-        </Button>
+        <>
+          <div className="reminder-actions">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={edit}
+              disabled={busy}
+            >
+              <Clock3 size={13} />
+              Reschedule
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={download}
+              disabled={busy}
+            >
+              <Download size={13} />
+              Download .ics
+            </Button>
+          </div>
+          <p className="help-text">
+            Import this snapshot into your calendar app. Later changes do not
+            sync automatically.
+          </p>
+        </>
       )}
       {error && (
         <p className="help-text" role="alert">

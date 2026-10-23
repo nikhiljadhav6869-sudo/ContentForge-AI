@@ -20,6 +20,7 @@ from pypdf import PdfReader
 from sqlalchemy import select, update, func, text
 from sqlalchemy.exc import IntegrityError
 from .config import settings
+from .calendar_exports import reminder_calendar
 from .middleware import BodyLimitMiddleware
 from .db import (
     Session,
@@ -826,6 +827,25 @@ def calendar(who=Depends(identity)):
             artifact = db.get(ContentArtifact, job.artifact_id)
             result.append({**serialize(job), "title": artifact.title, "platform": artifact.platform})
         return result
+
+
+@app.get("/api/calendar/{job_id}/export")
+def export_reminder(job_id: str, who=Depends(identity)):
+    with Session() as db:
+        job = db.get(PublishingJob, job_id)
+        if not job or job.workspace_id != who["workspace_id"]:
+            raise HTTPException(404, "Schedule not found.")
+        if job.status != "scheduled_draft":
+            raise HTTPException(409, "Only active editorial reminders can be downloaded.")
+        artifact = db.get(ContentArtifact, job.artifact_id)
+        run = owned_run(db, artifact.run_id, who)
+        version = db.get(ArtifactVersion, job.version_id)
+        data = reminder_calendar(job, artifact, version, run.mode)
+    return Response(
+        data,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="contentforge-reminder-{job.id}.ics"'},
+    )
 
 
 def future_schedule(value: str):

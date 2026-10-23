@@ -62,6 +62,12 @@ Open **Publishing calendar**, find the draft in **Upcoming drafts**, and click *
 
 Times use your browser’s timezone. If another tab changed the reminder, close the editor and reopen it to use the latest time. Cancelled reminders cannot be rescheduled. Reminders do not publish content to external platforms.
 
+## Download a calendar reminder
+
+In **Publishing calendar → Upcoming drafts**, click **Download .ics** on a reminder. Import the downloaded file using your calendar app’s import command. It contains the saved reminder time, title, and approved version reference. UTC timestamps let calendar apps display the event in their own timezone; demo content is explicitly labeled.
+
+Calendar downloads are snapshots, not subscriptions or invitations. After moving or cancelling a reminder, update or remove an earlier imported event manually; importing a newer file may create a duplicate depending on the calendar app. Downloads contain reminder metadata, not the full content draft, and do not publish content.
+
 ## Connect live models
 
 For local development, copy `backend/.env.example` to `backend/.env`. For Compose, edit the root `.env`. Set the provider variables on the server, then restart the API and worker:
