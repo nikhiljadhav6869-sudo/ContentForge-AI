@@ -112,3 +112,7 @@ See [TESTING.md](TESTING.md) for exact coverage and recorded outcomes. See [DEMO
 ## Practical limits
 
 This is a working production-oriented reference project, not a claim of audited production readiness. Claim extraction and the quality rubric are deliberately transparent heuristics. Live generation must be reviewed. Export and editorial scheduling work; external social publishing is not connected. Rich-text editing controls save plain text, so formatting marks are not retained. The built-in guest demo is intended for local presentations; disable it for public deployments. See deployment notes for scaling, recovery, and security boundaries.
+
+## Check deployment readiness
+
+Before a public deployment, run `docker compose exec -T api python -m app.preflight --provider openai` (or choose `gemini` / `ollama`). It reports configuration issues, database migration status, checkpoint storage, Redis connectivity, and active workers without printing secrets. Use `--offline` to check configuration only, or `--json` for automation. A passing check does not verify live generation or the public website. See [DEPLOYMENT.md](DEPLOYMENT.md#check-deployment-configuration-and-services).

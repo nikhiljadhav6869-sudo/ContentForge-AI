@@ -15,6 +15,27 @@ The API runs Alembic and checkpoint setup before listening. The worker starts af
 
 Change `WEB_PORT` or `API_PORT` in the root `.env` if local ports are occupied. `FRONTEND_ORIGIN` must match the browser origin, including port. The root file is for Compose; local non-container Python reads `backend/.env`.
 
+## Check deployment configuration and services
+
+Run the operator preflight from the API container so it reads the same configuration as the backend:
+
+```bash
+docker compose exec -T api python -m app.preflight --provider openai
+```
+
+Choose `openai`, `gemini`, or `ollama` explicitly. Add `--json` for machine-readable output. For a configuration-only check outside Docker:
+
+```bash
+cd backend
+.venv/bin/python -m app.preflight --provider openai --offline --json
+```
+
+Exit **0** means the checks in the reported scope passed; exit **1** means at least one failed (invalid command arguments use exit **2**). With `--offline`, no services are contacted and a successful result applies only to configuration. Fix the reported environment settings in your deployment configuration, then rerun the command. It does not rewrite configuration, migrate databases, change queue registrations, enqueue workflows, or call an AI provider.
+
+Configuration checks cover the exact public HTTPS frontend origin, secure cookies, guest sign-in disabled, PostgreSQL application/checkpoint URLs, Redis, and fields for the selected provider. Service checks use read-only database queries to compare the installed Alembic revision with this release and locate checkpoint tables. Redis is pinged, then its worker registrations are inspected without cleaning or modifying them. A worker must listen on `contentforge`, be idle or busy, have an unexpired registration, and have a heartbeat within 450 seconds. Failed or unconfigured services are reported separately; a passing Redis ping alone does not imply a worker is available.
+
+Connection values, provider keys, worker names, and raw exception details are omitted from both output formats. Provider fields being present does **not** prove credentials are valid or a model can generate content. Public DNS/HTTPS, reverse-proxy behavior, backups, capacity, and an actual end-to-end workflow still need verification. The command reports these limits even when its checks pass. Local demo defaults intentionally fail the public-deployment configuration checks; keep them for local development rather than changing them just to obtain a passing report.
+
 ## Hosted frontend
 
 The `frontend/` directory is compatible with a Next.js host such as Vercel. Set the root directory to `frontend`, install with `npm ci`, build with `npm run build`, and configure server-only `BACKEND_URL` **before the build**. It is used in the API rewrite. Do not put provider keys in `NEXT_PUBLIC_*` variables.

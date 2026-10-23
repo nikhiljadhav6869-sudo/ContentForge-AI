@@ -5,8 +5,9 @@ Backend tests, Python diagnostics, TypeScript, the production build, and the ful
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 56 passed |
+| Backend, `.venv/bin/pytest -q` | 94 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
+| Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; four expected public-configuration failures for local demo settings |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
@@ -62,6 +63,10 @@ Campaign duplication tests verify that reading a reusable brief performs no writ
 Calendar rescheduling tests verify timezone normalization, future-date validation, workspace ownership, cross-origin write rejection and trusted-origin CORS preflight, unchanged approved-version references, atomic rejection of stale updates, cancelled reminders, and rejection of attempts to change the pinned content. Browser tests run in Asia/Kolkata and check local time prefilling, moving a reminder into another month, persistence after reload, discarding edits, validation errors, mobile layout, cancellation, server failures, and stale-editor recovery.
 
 Calendar download tests inspect MIME type, attachment filename, private/no-store handling, CRLF line endings, UTC timestamps, stable event identifiers after rescheduling, the pinned version reference, demo labels, workspace isolation, and cancelled-reminder rejection. Unicode titles are folded to at most 75 UTF-8 octets per line without splitting characters; escaped title data cannot inject additional events or attendees. Browser coverage downloads real files, checks updated timestamps after a move, verifies retry after an intercepted server error, and inspects the mobile controls. Imports into third-party calendar applications have not been tested; imported files are manual snapshots with no synchronization.
+
+The operator-only preflight change adds 38 test cases. Frontend/browser results above remain from the preceding calendar-download validation; no frontend code changed for preflight.
+
+Deployment preflight tests cover explicit configuration-only operation, public-origin validation, provider selection, missing connection settings, read-only migration/checkpoint probes, current versus stale worker registrations, correct queue membership, expired registrations, secret-redacted connection errors, CLI JSON and exit codes, and invalid settings that fail before the app can load. The preflight makes no provider generation request and does not prove public deployment readiness.
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 
