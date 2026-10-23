@@ -1,27 +1,42 @@
 """Exercise a running deployment without printing credentials or session cookies."""
 
 import argparse
+import getpass
 import hashlib
 import http.cookiejar
 import io
 import json
+import os
+import ssl
 import time
 import urllib.request
 import zipfile
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--base-url", default="http://localhost:3000")
+parser.add_argument(
+    "--email", help="Sign in to an existing account instead of creating a guest session"
+)
+parser.add_argument(
+    "--ca-file",
+    help="Trusted CA bundle for an HTTPS test deployment; TLS verification stays enabled",
+)
 args = parser.parse_args()
 base = args.base_url.rstrip("/")
 client = urllib.request.build_opener(
-    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()),
+    urllib.request.HTTPSHandler(
+        context=ssl.create_default_context(cafile=args.ca_file)
+    ),
 )
 
 
 def request(path, body=None, raw=False):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
-        base + "/api" + path, data=data, headers={"Content-Type": "application/json"}
+        base + "/api" + path,
+        data=data,
+        headers={"Content-Type": "application/json", "Origin": base},
     )
     with client.open(req, timeout=30) as response:
         return response.read() if raw else json.load(response)
@@ -41,7 +56,14 @@ def wait_for(run_id, target):
 
 health = request("/health")
 assert health["status"] == "ok"
-request("/auth/demo", {})
+if args.email:
+    password = os.environ.get("CONTENTFORGE_SMOKE_PASSWORD") or getpass.getpass(
+        "Account password: "
+    )
+    request("/auth/login", {"email": args.email, "password": password})
+    del password
+else:
+    request("/auth/demo", {})
 project = request("/projects", {"name": "Deployment verification"})
 run_id = request(
     "/workflows",
@@ -63,6 +85,20 @@ request(
     },
 )
 finished = wait_for(run_id, "completed")
+last_event = finished["events"][-1]
+event_request = urllib.request.Request(
+    base + "/api/workflows/" + run_id + "/events",
+    headers={"Last-Event-ID": str(last_event["sequence"] - 1)},
+)
+with client.open(event_request, timeout=10) as response:
+    assert response.headers.get_content_type() == "text/event-stream"
+    while True:
+        line = response.readline().decode()
+        if not line:
+            raise RuntimeError("Event stream closed before replaying the saved event.")
+        if line.startswith("data: "):
+            assert json.loads(line[6:])["sequence"] == last_event["sequence"]
+            break
 exported = request("/workflows/" + run_id + "/export?format=json")
 assert len(exported["artifacts"]) == 4 and exported["approval"]["decision"] == "approve"
 package = request("/workflows/" + run_id + "/export?format=zip", raw=True)
@@ -89,6 +125,7 @@ print(
             "events": len(finished["events"]),
             "artifacts": len(exported["artifacts"]),
             "zip_files": zip_files,
+            "event_replay": "passed",
             "run_id": run_id,
         }
     )

@@ -5,9 +5,12 @@ Backend tests, Python diagnostics, TypeScript, the production build, and the ful
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 94 passed |
+| Backend, `.venv/bin/pytest -q` | 129 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; four expected public-configuration failures for local demo settings |
+| Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; separate volumes; Caddy validated with network disabled |
+| Isolated HTTPS deployment | Passed with a trusted local CA: web/API routing, HTTP redirect, HSTS, secure login, guest rejection, cross-origin rejection, and rejection of an untrusted certificate |
+| Account-based HTTPS workflow smoke | Passed: PostgreSQL, Redis/RQ, 10 agents, 187 events, 4 artifacts, 9 ZIP members, and SSE event replay |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
@@ -42,6 +45,16 @@ docker compose up --build -d
 python3 scripts/smoke.py --base-url http://localhost:3000
 ```
 
+For production configuration checks, run `python3 scripts/check_deployment.py` with Docker Compose 2.24.4 or newer. It resolves both configurations with synthetic values, deliberately supplies insecure local defaults, and checks that the production override still enforces the intended boundaries. It never starts containers or reads the operator's `.env` files. GitHub Actions includes a separate deployment job for this check and Caddy configuration validation; its remote result must be checked separately.
+
+For an HTTPS deployment with guest sign-in disabled, first create an account, then run:
+
+```bash
+python3 scripts/smoke.py --base-url https://your-domain.example.com --email your-account@example.com
+```
+
+The script prompts for the existing account password, or reads `CONTENTFORGE_SMOKE_PASSWORD` when supplied by automation. It creates a verification campaign in that account. `--ca-file /path/to/trusted-ca.pem` supports an internal test CA while retaining certificate and hostname verification. The smoke test also reads a persisted SSE event using `Last-Event-ID` through the deployment proxy.
+
 `scripts/capture.mjs` captures real screenshots from a running demonstration. The checked-in screenshots were captured against the production containers.
 
 ## Coverage
@@ -65,6 +78,10 @@ Calendar rescheduling tests verify timezone normalization, future-date validatio
 Calendar download tests inspect MIME type, attachment filename, private/no-store handling, CRLF line endings, UTC timestamps, stable event identifiers after rescheduling, the pinned version reference, demo labels, workspace isolation, and cancelled-reminder rejection. Unicode titles are folded to at most 75 UTF-8 octets per line without splitting characters; escaped title data cannot inject additional events or attendees. Browser coverage downloads real files, checks updated timestamps after a move, verifies retry after an intercepted server error, and inspects the mobile controls. Imports into third-party calendar applications have not been tested; imported files are manual snapshots with no synchronization.
 
 The operator-only preflight change adds 38 test cases. Frontend/browser results above remain from the preceding calendar-download validation; no frontend code changed for preflight.
+
+The HTTPS deployment change adds 35 backend test cases for accepted/rejected domain names, configuration injection, random independent passwords, owner-only file creation, existing configuration preservation, and symlink protection. Python diagnostics also passed for the new deployment scripts and updated smoke script. No frontend code changed; the prior browser/build results remain applicable to that code.
+
+The HTTPS runtime check used a separate `contentforge-https-validation` Compose project and fresh data volumes, the existing validated application images, and the new Caddy configuration. The test-only override bound the proxy to loopback ports, used `localhost` and a local CA, and adjusted the browser origin to the test port. TLS verification was enabled throughout; an explicit untrusted-root request failed as expected. The real database, migrations, checkpoint tables, queue, worker heartbeat, secure-cookie setting, and disabled guest setting passed preflight. Its public-origin check intentionally rejected localhost. The application flow was verified with password-account login and the labeled demo provider. Public ACME issuance and live model generation were not tested. Disposable test containers and volumes were removed after validation; local demo data was retained.
 
 Deployment preflight tests cover explicit configuration-only operation, public-origin validation, provider selection, missing connection settings, read-only migration/checkpoint probes, current versus stale worker registrations, correct queue membership, expired registrations, secret-redacted connection errors, CLI JSON and exit codes, and invalid settings that fail before the app can load. The preflight makes no provider generation request and does not prove public deployment readiness.
 

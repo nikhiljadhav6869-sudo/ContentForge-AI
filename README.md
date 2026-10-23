@@ -18,6 +18,8 @@ docker compose ps
 
 Open port **3000** in your local browser. Choose **Explore the live demo** for the complete electric-vehicle campaign, or create an account for a persistent personal workspace. The generator creates a private, ignored `.env` with a random local database password; existing files are preserved.
 
+For a public domain, follow [the HTTPS deployment steps](DEPLOYMENT.md#https-on-your-own-server). The separate production configuration adds automatic TLS through Caddy, secure cookies, disabled guest sign-in, internal service ports, and persistent certificate storage. You supply the server, domain, and any live model credentials.
+
 ## Develop without Docker
 
 Requires Python 3.12+, `uv` 0.12.23, and Node.js 22 or newer.

@@ -6,6 +6,20 @@ on:
 permissions:
   contents: read
 jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/check_deployment.py
+      - name: Validate HTTPS proxy configuration without network access
+        run: >-
+          docker run --rm --network none -e DOMAIN=studio.example.com
+          -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2.10.2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
   application:
     runs-on: ubuntu-latest
     timeout-minutes: 20

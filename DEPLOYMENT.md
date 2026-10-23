@@ -15,6 +15,44 @@ The API runs Alembic and checkpoint setup before listening. The worker starts af
 
 Change `WEB_PORT` or `API_PORT` in the root `.env` if local ports are occupied. `FRONTEND_ORIGIN` must match the browser origin, including port. The root file is for Compose; local non-container Python reads `backend/.env`.
 
+## HTTPS on your own server
+
+The production override runs Caddy, the frontend, API, PostgreSQL, Redis, and the worker together. Use a Linux server with Docker Engine, **Docker Compose 2.24.4 or newer**, and a public domain you control. Point its A record (and AAAA record only if IPv6 works) at the server, and allow inbound TCP ports 80/443. UDP 443 is optional for HTTP/3. Caddy obtains and renews public certificates once DNS and reachability are correct.
+
+From the repository root on that server, replace the example domain with yours:
+
+```bash
+python3 scripts/configure_production.py --domain studio.example.com
+```
+
+This creates `.env.production` with owner-only permissions and a random database password. Existing files are preserved, including the local `.env`. Open `.env.production` in your editor and add the credentials/model for your chosen provider. Keep it private and retain a protected backup. The generator validates hostname syntax; it does not register a domain, check DNS ownership, or buy hosting.
+
+Validate the deployment structure and start the stack:
+
+```bash
+python3 scripts/check_deployment.py
+docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml up --build -d
+docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml ps
+docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml logs --tail=50 proxy
+docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml exec -T api python -m app.preflight --provider openai
+```
+
+Select `gemini` or `ollama` for preflight if appropriate. `check_deployment.py` uses synthetic configuration to check the Compose merge; it does not inspect your credentials or contact your server. The container preflight checks the running backend. Finally, open `https://` followed by your domain and create an account. Verify its demo workflow through HTTPS with:
+
+```bash
+python3 scripts/smoke.py --base-url https://studio.example.com --email your-account@example.com
+```
+
+The script prompts privately for the existing account's password, then creates a labeled verification project/campaign and checks workflow execution, event replay, human approval, and exports. For automation, provide `CONTENTFORGE_SMOKE_PASSWORD` through your secret manager; do not put passwords in command arguments. Signed-in accounts can run the labeled demo without a model key; a successful live campaign is still required to verify your chosen provider. Guest demo sign-in is disabled.
+
+Only Caddy publishes host ports. Requests under `/api` go directly to FastAPI, with immediate event-stream flushing; other requests go to Next.js. Production enforces the HTTPS browser origin, secure session cookies, and disabled guest access even if local demo defaults are present. HSTS applies to this hostname only. API, database, queue, and frontend ports remain internal. Certificate/account state persists in named Caddy volumes.
+
+The Compose project is named `contentforge-production`, with its own database and other volumes. It does not import accounts or campaigns from the local `contentforge` project. Use the same `--env-file` and both `-f` arguments for every production operation, including restart, logs, exec, and down. Keep the project name stable so Compose can find the existing volumes. Do not regenerate a database password against an existing PostgreSQL volume: changing the file alone does not rotate the database password. Never use `down -v` on a deployment whose data you need.
+
+For upgrades, back up PostgreSQL and configuration first, fetch the reviewed release, and repeat the production `up --build -d` command. This single-server setup can have brief downtime during an upgrade. For a build requiring the trusted CA override below, add `-f compose.ca.yaml` after `-f compose.production.yaml` and supply `CONTENTFORGE_BUILD_CA` when building.
+
+Public account registration remains enabled. Each account has its own workspace, but configured provider credentials are server-wide. Use controlled access and suitable quotas before admitting untrusted users. The operational limits below still apply; this configuration alone does not establish production readiness. Public DNS and certificate issuance must be checked on your actual server.
+
 ## Check deployment configuration and services
 
 Run the operator preflight from the API container so it reads the same configuration as the backend:

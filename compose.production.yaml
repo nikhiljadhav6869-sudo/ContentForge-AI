@@ -1,0 +1,39 @@
+# Requires Docker Compose 2.24.4 or newer for !reset.
+# Always combine with compose.yaml and --env-file .env.production.
+name: contentforge-production
+services:
+  postgres:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  api:
+    ports: !reset []
+    environment: &production-env
+      FRONTEND_ORIGIN: https://${DOMAIN:?Run python3 scripts/configure_production.py --domain your.domain first}
+      DEMO_AUTH: "false"
+      SECURE_COOKIES: "true"
+  worker:
+    environment: *production-env
+  web:
+    ports: !reset []
+  proxy:
+    image: caddy:2.10.2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env.production}
+      # Internal service traffic must bypass any inherited outbound HTTP proxy.
+      NO_PROXY: api,web,localhost,127.0.0.1
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api: {condition: service_healthy}
+      web: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  caddy-data:
+  caddy-config:
