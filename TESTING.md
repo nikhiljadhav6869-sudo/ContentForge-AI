@@ -5,12 +5,13 @@ Backend tests, Python diagnostics, TypeScript, the production build, and the ful
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 129 passed |
+| Backend, `.venv/bin/pytest -q` | 140 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; four expected public-configuration failures for local demo settings |
 | Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; separate volumes; Caddy validated with network disabled |
 | Isolated HTTPS deployment | Passed with a trusted local CA: web/API routing, HTTP redirect, HSTS, secure login, guest rejection, cross-origin rejection, and rejection of an untrusted certificate |
 | Account-based HTTPS workflow smoke | Passed: PostgreSQL, Redis/RQ, 10 agents, 187 events, 4 artifacts, 9 ZIP members, and SSE event replay |
+| Database backup and isolated restore | Passed: archive checksum verified; all 24 public tables restored with matching row counts and content digests, including application data and checkpoints |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
@@ -82,6 +83,10 @@ The operator-only preflight change adds 38 test cases. Frontend/browser results 
 The HTTPS deployment change adds 35 backend test cases for accepted/rejected domain names, configuration injection, random independent passwords, owner-only file creation, existing configuration preservation, and symlink protection. Python diagnostics also passed for the new deployment scripts and updated smoke script. No frontend code changed; the prior browser/build results remain applicable to that code.
 
 The HTTPS runtime check used a separate `contentforge-https-validation` Compose project and fresh data volumes, the existing validated application images, and the new Caddy configuration. The test-only override bound the proxy to loopback ports, used `localhost` and a local CA, and adjusted the browser origin to the test port. TLS verification was enabled throughout; an explicit untrusted-root request failed as expected. The real database, migrations, checkpoint tables, queue, worker heartbeat, secure-cookie setting, and disabled guest setting passed preflight. Its public-origin check intentionally rejected localhost. The application flow was verified with password-account login and the labeled demo provider. Public ACME issuance and live model generation were not tested. Disposable test containers and volumes were removed after validation; local demo data was retained.
+
+Backup coverage adds 11 tests for private file/directory permissions, archive checksums, explicit restore-verification limits, local/production project selection, existing files and symlinks, destination races, invalid archive output, failed dumps/catalog checks, timeouts, disk errors, redacted errors, and partial-file cleanup. The archive test reads the inherited file descriptor to catch buffered stream offset errors when piping the backup into a child process.
+
+The real backup was restored with PostgreSQL 16 into a temporary container with networking disabled and its data on tmpfs. `pg_restore --single-transaction --exit-on-error` succeeded; all 24 public tables matched the source database by row count and an ordered digest of complete row contents. The archive SHA-256 checksum also matched. The temporary restore container was removed afterward. This proves recovery of that recorded snapshot; it does not establish scheduled backups, off-server retention, encryption, recovery of Redis queue state, or restoration of every future backup. Application images and frontend code did not change for this operator utility.
 
 Deployment preflight tests cover explicit configuration-only operation, public-origin validation, provider selection, missing connection settings, read-only migration/checkpoint probes, current versus stale worker registrations, correct queue membership, expired registrations, secret-redacted connection errors, CLI JSON and exit codes, and invalid settings that fail before the app can load. The preflight makes no provider generation request and does not prove public deployment readiness.
 

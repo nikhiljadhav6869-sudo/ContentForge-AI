@@ -92,6 +92,48 @@ PDF extraction uses a separate subprocess with memory, CPU, size, and page limit
 
 ## Operations and limits
 
+### Database backups and restore checks
+
+For the standard Compose deployment, create a new PostgreSQL custom archive:
+
+```bash
+# Local Compose stack:
+python3 scripts/backup.py --output .data/backups/before-upgrade.dump
+# Production stack instead:
+python3 scripts/backup.py --production --output .data/backups/production-before-upgrade.dump
+```
+
+The command reads the selected stack's PostgreSQL database, checks the archive catalog, and prints its size and SHA-256 checksum. It creates the archive with owner-only permissions, refuses to replace an existing path, and removes partial files on failure. An archive becomes visible under its final name only after dumping and catalog validation succeed. New backup directories are private. Existing directories keep their permissions. Use a fresh filename for each backup; retention and scheduling are operator-managed.
+
+The archive contains application data, account/password hashes, saved sessions, extracted source text, and LangGraph checkpoints in the standard shared PostgreSQL database. It is not encrypted. Store protected, encrypted copies outside the server, and keep configuration/provider secrets and Caddy certificate state separately. Redis jobs, `.env` files, TLS state, external databases, and local SQLite files are not included. The script targets the standard project names and database/user from this repository; a customized or externally hosted database needs its own backup procedure.
+
+`pg_dump` takes a consistent database snapshot without changing the source or stopping services. For an upgrade or recovery point with no in-flight application work, let workflows finish or reach human review, stop API/worker writes during the snapshot, then restart them. A readable archive catalog is not proof of recovery: the command explicitly returns `restore_verified: false`.
+
+Test a restore into a disposable, isolated database. This example uses RAM for its data directory and is suitable for a small archive:
+
+```bash
+docker run -d --rm --name contentforge-restore-check --network none \
+  --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid \
+  -e POSTGRES_USER=contentforge -e POSTGRES_DB=contentforge \
+  -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine
+docker exec contentforge-restore-check pg_isready -U contentforge -d contentforge
+```
+
+Once `pg_isready` reports that it is accepting connections, restore the archive and inspect application/checkpoint data:
+
+```bash
+docker exec -i contentforge-restore-check pg_restore \
+  --username=contentforge --dbname=contentforge --no-owner --no-acl \
+  --single-transaction --exit-on-error < .data/backups/before-upgrade.dump
+docker exec contentforge-restore-check psql -U contentforge -d contentforge -X \
+  -c 'SELECT count(*) AS campaigns FROM workflow_runs; SELECT count(*) AS checkpoints FROM checkpoints;'
+docker stop contentforge-restore-check
+```
+
+The test database has no network access or published ports; its temporary data disappears when stopped. Check the saved checksum and inspect the restored records before treating a backup as usable. For actual recovery, restore into a fresh deployment database before starting application services, verify it, and retain the old deployment until recovery is confirmed. Redis queue state is separate: review unfinished workflows and their checkpoints before enabling workers. Never run this restore against a serving application database.
+
+### Service behavior
+
 - Health: `GET /api/health` tests the database and, when configured, Redis. It does not certify a worker is consuming jobs or a model is reachable.
 - The workspace header checks API health every 30 seconds while visible, on window focus, and on demand. Checks time out after five seconds. A lost browser connection or failed check replaces the available indicator; temporary identity lookup failures offer retry without starting a new guest session.
 - Back up PostgreSQL, including checkpoint tables, and retain the root configuration separately. Local SQLite requires both the application database and checkpoint database.
