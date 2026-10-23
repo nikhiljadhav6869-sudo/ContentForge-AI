@@ -5,13 +5,13 @@ Backend tests, Python diagnostics, TypeScript, the production build, and the ful
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 46 passed |
+| Backend, `.venv/bin/pytest -q` | 51 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 12 passed in one run: 3 duplication, 3 workflow, 2 campaign-library, and 4 recovery checks |
+| Playwright against the production web/API containers | 14 passed in the full suite; both calendar tests also passed again after the final API guard update |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 | SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 
@@ -58,6 +58,8 @@ Campaign library tests seed 125 persisted workflows and verify pagination beyond
 The final campaign-library browser run also verifies that a selected campaign remains available when absent from the recent-items picker. The mobile width check waits for the responsive sidebar transition to settle before measuring overflow.
 
 Campaign duplication tests verify that reading a reusable brief performs no writes, enforces workspace ownership, excludes project IDs and internal revision feedback, preserves live source selection and custom constraints, and resets demo references. Launching a copy of an approved campaign produces new drafts that require their own approval, while the original remains unchanged. Browser tests cover prefilled fields and custom tones, edited advanced settings retained when collapsed, separate campaign creation, missing-campaign retry, unavailable-provider handling, older selected sources, preserving edits during a settings refresh failure, and the mobile layout. The unavailable-provider browser scenario uses intercepted brief/settings/source fixtures and makes no live model calls.
+
+Calendar rescheduling tests verify timezone normalization, future-date validation, workspace ownership, cross-origin write rejection and trusted-origin CORS preflight, unchanged approved-version references, atomic rejection of stale updates, cancelled reminders, and rejection of attempts to change the pinned content. Browser tests run in Asia/Kolkata and check local time prefilling, moving a reminder into another month, persistence after reload, discarding edits, validation errors, mobile layout, cancellation, server failures, and stale-editor recovery.
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 

@@ -35,7 +35,6 @@ import {
   Save,
   ShieldCheck,
   Sparkles,
-  Trash2,
   TriangleAlert,
   Zap,
 } from "lucide-react";
@@ -65,6 +64,7 @@ import {
 } from "./shared";
 import { ReviewPanel } from "./content-studio";
 import CampaignLibrary from "./campaign-library";
+import ReminderCard from "./reminder-card";
 const chartTheme = {
   background: "#192235",
   border: "1px solid #2b3850",
@@ -621,15 +621,6 @@ export function Calendar() {
       setBusy(false);
     }
   }
-  async function remove(id: string) {
-    try {
-      await api(`/calendar/${id}`, { method: "DELETE" });
-      await client.invalidateQueries({ queryKey: ["calendar"] });
-      toast.success("Schedule cancelled.");
-    } catch (error) {
-      toast.error((error as Error).message);
-    }
-  }
   return (
     <>
       <PageHeading
@@ -804,29 +795,26 @@ export function Calendar() {
           </section>
           <section className="panel schedule-list">
             <h2>Upcoming drafts</h2>
+            {schedule.isLoading && (
+              <p className="help-text">Loading reminders…</p>
+            )}
+            {schedule.error && (
+              <ErrorState
+                error={schedule.error}
+                retry={() => schedule.refetch()}
+              />
+            )}
             {jobs
               .filter((j) => j.status !== "cancelled")
               .map((j) => (
-                <div key={j.id}>
-                  <span>
-                    <strong>{label(j.platform)}</strong>
-                    <small>{new Date(j.scheduled_at).toLocaleString()}</small>
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Cancel ${j.platform} schedule`}
-                    onClick={() => remove(j.id)}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
+                <ReminderCard key={j.id} job={j} onMoved={setMonth} />
               ))}
-            {!jobs.some((j) => j.status !== "cancelled") && (
-              <p className="help-text">
-                Approved content can be scheduled here.
-              </p>
-            )}
+            {schedule.isSuccess &&
+              !jobs.some((j) => j.status !== "cancelled") && (
+                <p className="help-text">
+                  Approved content can be scheduled here.
+                </p>
+              )}
           </section>
         </aside>
       </div>

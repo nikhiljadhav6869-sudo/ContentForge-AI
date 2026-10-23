@@ -3110,12 +3110,33 @@ small {
 .calendar-layout aside select {
   font-size: 10px;
 }
-.schedule-list > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.reminder-card {
   padding: 13px 0;
   border-bottom: 1px solid var(--line);
+}
+.reminder-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.reminder-heading > span {
+  min-width: 0;
+}
+.reminder-title {
+  display: block;
+  font-size: 11px;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.reminder-card form {
+  margin-top: 12px;
+}
+.reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .schedule-list h2 {
   margin-bottom: 5px;

@@ -56,6 +56,12 @@ The library refreshes every 15 seconds while visible and also has a manual refre
 
 Opening the duplicate form does not start agents. Live campaigns reuse selected source material; demo campaigns create fresh sample references. Drafts, comments, revision feedback, approvals, and schedules stay with the original campaign. If its model provider is unavailable, choose a configured execution mode before launching. The original campaign stays unchanged.
 
+## Move an editorial reminder
+
+Open **Publishing calendar**, find the draft in **Upcoming drafts**, and click **Reschedule**. Choose a future date and time, then click **Save new time**. The calendar moves to the selected date, and the reminder keeps the same approved content version. **Discard changes** leaves the saved reminder unchanged.
+
+Times use your browser’s timezone. If another tab changed the reminder, close the editor and reopen it to use the latest time. Cancelled reminders cannot be rescheduled. Reminders do not publish content to external platforms.
+
 ## Connect live models
 
 For local development, copy `backend/.env.example` to `backend/.env`. For Compose, edit the root `.env`. Set the provider variables on the server, then restart the API and worker:

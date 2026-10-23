@@ -61,7 +61,14 @@ class CommentInput(BaseModel):
 
 class ScheduleInput(BaseModel):
     artifact_id: str
-    scheduled_at: str
+    scheduled_at: str = Field(max_length=64)
+
+
+class RescheduleInput(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    scheduled_at: str = Field(max_length=64)
+    expected_scheduled_at: str = Field(min_length=1, max_length=64)
 
 
 class Preferences(BaseModel):

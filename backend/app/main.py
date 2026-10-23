@@ -54,6 +54,7 @@ from .schemas import (
     EditInput,
     CommentInput,
     ScheduleInput,
+    RescheduleInput,
     Preferences,
     EvidenceInput,
 )
@@ -85,7 +86,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type", "Last-Event-ID"],
 )
 app.add_middleware(BodyLimitMiddleware)
@@ -95,7 +96,7 @@ rate_lock = threading.Lock()
 
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    if request.method in ("POST", "PUT", "DELETE"):
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
         origin = request.headers.get("origin")
         if request.headers.get("sec-fetch-site") == "cross-site" or (origin and origin != settings.frontend_origin):
             return Response(json.dumps({"detail": "Cross-origin write blocked."}), 403, media_type="application/json")
@@ -827,14 +828,19 @@ def calendar(who=Depends(identity)):
         return result
 
 
+def future_schedule(value: str):
+    try:
+        date = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if date.tzinfo is None or date <= datetime.now(timezone.utc):
+            raise ValueError()
+        return date.astimezone(timezone.utc).isoformat()
+    except (ValueError, OverflowError):
+        raise HTTPException(400, "Choose a future date with a timezone.") from None
+
+
 @app.post("/api/calendar", status_code=201)
 def schedule(body: ScheduleInput, who=Depends(identity)):
-    try:
-        date = datetime.fromisoformat(body.scheduled_at.replace("Z", "+00:00"))
-        if date.tzinfo is None or date < datetime.now(timezone.utc):
-            raise ValueError()
-    except ValueError:
-        raise HTTPException(400, "Choose a future date with a timezone.") from None
+    date = future_schedule(body.scheduled_at)
     with Session.begin() as db:
         artifact = db.get(ContentArtifact, body.artifact_id)
         if not artifact:
@@ -851,10 +857,34 @@ def schedule(body: ScheduleInput, who=Depends(identity)):
             workspace_id=who["workspace_id"],
             artifact_id=artifact.id,
             version_id=version.id,
-            scheduled_at=date.astimezone(timezone.utc).isoformat(),
+            scheduled_at=date,
         )
         db.add(job)
         db.flush()
+        return serialize(job)
+
+
+@app.patch("/api/calendar/{job_id}")
+def reschedule(job_id: str, body: RescheduleInput, who=Depends(identity)):
+    date = future_schedule(body.scheduled_at)
+    with Session.begin() as db:
+        # Compare and update atomically so stale editors cannot overwrite a move
+        # or revive a cancelled reminder. The approved version stays pinned.
+        changed = db.execute(
+            update(PublishingJob)
+            .where(
+                PublishingJob.id == job_id,
+                PublishingJob.workspace_id == who["workspace_id"],
+                PublishingJob.status == "scheduled_draft",
+                PublishingJob.scheduled_at == body.expected_scheduled_at,
+            )
+            .values(scheduled_at=date)
+        ).rowcount
+        job = db.get(PublishingJob, job_id)
+        if not job or job.workspace_id != who["workspace_id"]:
+            raise HTTPException(404, "Schedule not found.")
+        if not changed:
+            raise HTTPException(409, "This reminder changed or was cancelled. Close the editor and try again.")
         return serialize(job)
 
 
