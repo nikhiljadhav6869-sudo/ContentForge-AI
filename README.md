@@ -38,6 +38,7 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - Dashboard, analytics, editorial calendar, brand preferences, dark/light/system themes, command palette, responsive navigation, authentication, and workspace ownership checks.
 - Live API connection status, outage recovery, and campaign selection scoped to the signed-in workspace.
 - **Campaign library:** title search, status filters, newest/oldest ordering, and server-side pagination across your campaign history. Filters stay in the page URL for reloads and browser navigation.
+- **Duplicate campaigns:** review and edit a saved brief, audience, formats, source selection, and quality settings before launching a separate campaign with fresh drafts and approval.
 - PostgreSQL/SQLite persistence, Alembic migrations, Redis/RQ worker, local fallback queue, Docker configuration, tests, and CI.
 
 ## Find a campaign
@@ -45,6 +46,15 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 Open **Overview → Campaign library**. Enter part of a campaign title and press **Search**, then choose a status or creation order. **Active** includes queued and running workflows; **Needs attention** includes failed and interrupted workflows. Use **Previous** and **Next** to browse older results, and click a campaign to open its control center. **Clear filters** restores the full list.
 
 The library refreshes every 15 seconds while visible and also has a manual refresh button. Searches and totals are scoped to your signed-in workspace. Saved page URLs retain filters; opening a URL in another account searches that account's own campaigns.
+
+## Reuse a campaign
+
+1. Open a campaign from **Overview → Campaign library**.
+2. In its control center, click **Duplicate campaign**.
+3. Review the copied brief, audience, tone, brand voice, formats, sources, execution mode, and advanced settings.
+4. Click **Launch agent team** to create a new campaign.
+
+Opening the duplicate form does not start agents. Live campaigns reuse selected source material; demo campaigns create fresh sample references. Drafts, comments, revision feedback, approvals, and schedules stay with the original campaign. If its model provider is unavailable, choose a configured execution mode before launching. The original campaign stays unchanged.
 
 ## Connect live models
 

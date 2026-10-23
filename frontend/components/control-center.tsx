@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock3,
+  Copy,
   Download,
   FileText,
   GitBranch,
@@ -122,6 +123,14 @@ export default function ControlCenter({ id }: { id: string | null }) {
         </div>
         <StatusBadge status={run.status} />
         <div className="workflow-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push(`/workflows/new?from=${id}`)}
+          >
+            <Copy size={13} />
+            Duplicate campaign
+          </Button>
           {["failed", "interrupted"].includes(run.status) && (
             <Button
               size="sm"

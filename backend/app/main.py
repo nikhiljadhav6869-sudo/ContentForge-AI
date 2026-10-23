@@ -450,6 +450,19 @@ def campaign_library(
         }
 
 
+@app.get("/api/workflows/{run_id}/brief")
+def reusable_brief(run_id: str, who=Depends(identity)):
+    with Session() as db:
+        run = owned_run(db, run_id, who)
+        # Validate only public creation fields; never copy feedback or review state.
+        brief = Brief.model_validate(db.get(ContentRequest, run.request_id).brief)
+        brief.project_id = None
+        if brief.mode == "demo":
+            # A new demo seeds its own explicitly labeled sample references.
+            brief.source_ids = []
+        return brief.model_dump(exclude={"project_id"})
+
+
 @app.get("/api/workflows/{run_id}")
 def workflow(run_id: str, who=Depends(identity)):
     with Session() as db:

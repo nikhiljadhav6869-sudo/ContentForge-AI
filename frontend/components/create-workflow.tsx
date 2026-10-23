@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -19,9 +19,9 @@ import {
   Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api, post, type Source, type Settings } from "@/lib/api";
+import { api, post, type Source, type Settings, type Detail } from "@/lib/api";
 import { Button } from "./ui/button";
-import { PageHeading } from "./shared";
+import { PageHeading, Loading, ErrorState } from "./shared";
 const platforms = [
   {
     id: "blog",
@@ -49,34 +49,70 @@ const platforms = [
   },
 ];
 export default function CreateWorkflow() {
-  const router = useRouter();
-  const client = useQueryClient();
-  const [selected, setSelected] = useState([
-    "blog",
-    "linkedin",
-    "instagram",
-    "youtube",
-  ]);
-  const [sources, setSources] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [mode, setMode] = useState("demo");
-  const [url, setUrl] = useState("");
-  const [advanced, setAdvanced] = useState(false);
+  return (
+    <Suspense fallback={<Loading />}>
+      <LoadWorkflow />
+    </Suspense>
+  );
+}
+function LoadWorkflow() {
+  const from = useSearchParams().get("from");
   const settings = useQuery({
     queryKey: ["settings"],
     queryFn: () => api<Settings>("/settings"),
   });
+  const template = useQuery({
+    queryKey: ["reusable-brief", from],
+    queryFn: () =>
+      api<Detail["brief"]>(`/workflows/${encodeURIComponent(from!)}/brief`),
+    enabled: from !== null,
+    retry: false,
+  });
+  if (settings.error && !settings.data)
+    return (
+      <ErrorState error={settings.error} retry={() => settings.refetch()} />
+    );
+  if (from !== null && template.error && !template.data)
+    return (
+      <ErrorState error={template.error} retry={() => template.refetch()} />
+    );
+  if (!settings.data || (from !== null && !template.data)) return <Loading />;
+  return (
+    <WorkflowForm
+      key={from ?? "new"}
+      settings={settings.data}
+      initial={from !== null ? template.data : undefined}
+    />
+  );
+}
+function WorkflowForm({
+  settings,
+  initial,
+}: {
+  settings: Settings;
+  initial?: Detail["brief"];
+}) {
+  const router = useRouter();
+  const client = useQueryClient();
+  const [selected, setSelected] = useState(
+    initial?.platforms ?? ["blog", "linkedin", "instagram", "youtube"],
+  );
+  const [sources, setSources] = useState<string[]>(initial?.source_ids ?? []);
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [mode, setMode] = useState(
+    initial?.mode ?? settings.preferences.default_provider,
+  );
+  const [url, setUrl] = useState("");
+  const [advanced, setAdvanced] = useState(false);
   const library = useQuery({
     queryKey: ["sources"],
     queryFn: () => api<Source[]>("/sources"),
   });
   const [prompt, setPrompt] = useState(
-    "Create a researched content campaign about electric vehicles in India.",
+    initial?.prompt ??
+      "Create a researched content campaign about electric vehicles in India.",
   );
-  useEffect(() => {
-    if (settings.data) setMode(settings.data.preferences.default_provider);
-  }, [settings.data]);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected.length) {
@@ -93,11 +129,11 @@ export default function CreateWorkflow() {
         source_ids: sources,
         mode,
         max_revisions: Number(
-          form.max_revisions ?? settings.data?.preferences.max_revisions ?? 1,
+          form.max_revisions ?? settings.preferences.max_revisions ?? 1,
         ),
         quality_threshold: Number(
           form.quality_threshold ??
-            settings.data?.preferences.quality_threshold ??
+            settings.preferences.quality_threshold ??
             80,
         ),
       });
@@ -146,9 +182,24 @@ export default function CreateWorkflow() {
     <>
       <PageHeading
         eyebrow="WORKFLOW STUDIO"
-        title="What will you create today?"
+        title={
+          initial
+            ? "Make this campaign your own"
+            : "What will you create today?"
+        }
         description="Give your agents a direction. They’ll take it from first draft to final review."
       />
+      {initial && (
+        <div className="info-callout" role="status">
+          <p>
+            Review your copied brief before launching a new campaign. Drafts and
+            approvals start fresh.
+            {mode === "demo"
+              ? " Demo mode creates fresh sample references."
+              : " Your selected source material is reused."}
+          </p>
+        </div>
+      )}
       <form className="creation-layout" onSubmit={submit}>
         <div className="creation-main">
           <section className="panel brief-panel">
@@ -291,28 +342,35 @@ export default function CreateWorkflow() {
               </Button>
             </div>
             <p className="help-text">
-              Approved domains: {settings.data?.source_hosts.join(", ")}. Demo
-              mode uses its own clearly labeled sample references.
+              Approved domains: {settings.source_hosts.join(", ")}. Demo mode
+              uses its own clearly labeled sample references.
             </p>
             <div className="source-checks">
-              {library.data?.slice(0, 12).map((s) => (
-                <label key={s.id}>
-                  <input
-                    type="checkbox"
-                    checked={sources.includes(s.id)}
-                    onChange={(e) =>
-                      setSources((v) =>
-                        e.target.checked
-                          ? [...v, s.id]
-                          : v.filter((id) => id !== s.id),
-                      )
-                    }
-                  />
-                  <FileText size={14} />
-                  <span>{s.title}</span>
-                  <small>{s.kind}</small>
-                </label>
-              ))}
+              {library.data
+                ?.filter(
+                  (s, index) =>
+                    index < 12 ||
+                    sources.includes(s.id) ||
+                    initial?.source_ids.includes(s.id),
+                )
+                .map((s) => (
+                  <label key={s.id}>
+                    <input
+                      type="checkbox"
+                      checked={sources.includes(s.id)}
+                      onChange={(e) =>
+                        setSources((v) =>
+                          e.target.checked
+                            ? [...v, s.id]
+                            : v.filter((id) => id !== s.id),
+                        )
+                      }
+                    />
+                    <FileText size={14} />
+                    <span>{s.title}</span>
+                    <small>{s.kind}</small>
+                  </label>
+                ))}
             </div>
           </section>
         </div>
@@ -326,13 +384,23 @@ export default function CreateWorkflow() {
               Who is this for?
               <input
                 name="audience"
-                defaultValue="Indian college students"
+                defaultValue={initial?.audience ?? "Indian college students"}
                 maxLength={200}
               />
             </label>
             <label>
               Voice & tone
-              <select name="tone">
+              <select
+                name="tone"
+                defaultValue={initial?.tone ?? "Clear and educational"}
+              >
+                {initial &&
+                  ![
+                    "Clear and educational",
+                    "Professional and insightful",
+                    "Warm and conversational",
+                    "Bold and imaginative",
+                  ].includes(initial.tone) && <option>{initial.tone}</option>}
                 <option>Clear and educational</option>
                 <option>Professional and insightful</option>
                 <option>Warm and conversational</option>
@@ -343,7 +411,9 @@ export default function CreateWorkflow() {
               Campaign goal
               <textarea
                 name="goals"
-                defaultValue="Educate and inspire informed action"
+                defaultValue={
+                  initial?.goals ?? "Educate and inspire informed action"
+                }
                 rows={2}
                 maxLength={1000}
               />
@@ -352,9 +422,9 @@ export default function CreateWorkflow() {
               Brand voice
               <textarea
                 name="brand"
-                key={settings.data?.preferences.brand_voice}
                 defaultValue={
-                  settings.data?.preferences.brand_voice ||
+                  initial?.brand ??
+                  settings.preferences.brand_voice ??
                   "Helpful, evidence-led, inclusive. Avoid hype."
                 }
                 rows={3}
@@ -373,12 +443,10 @@ export default function CreateWorkflow() {
                   <option
                     key={value}
                     value={value}
-                    disabled={
-                      value !== "demo" && !settings.data?.providers[value]
-                    }
+                    disabled={value !== "demo" && !settings.providers[value]}
                   >
                     {name}
-                    {value !== "demo" && !settings.data?.providers[value]
+                    {value !== "demo" && !settings.providers[value]
                       ? " · not configured"
                       : ""}
                   </option>
@@ -401,35 +469,44 @@ export default function CreateWorkflow() {
               Advanced workflow settings
               <ChevronDown size={14} />
             </button>
-            {advanced && (
-              <div className="advanced-fields">
-                <label>
-                  Quality threshold
-                  <input
-                    name="quality_threshold"
-                    type="number"
-                    min={50}
-                    max={100}
-                    defaultValue={
-                      settings.data?.preferences.quality_threshold || 80
-                    }
-                  />
-                </label>
-                <label>
-                  Maximum automatic revisions
-                  <input
-                    name="max_revisions"
-                    type="number"
-                    min={0}
-                    max={2}
-                    defaultValue={settings.data?.preferences.max_revisions ?? 1}
-                  />
-                </label>
-              </div>
-            )}
+            <div
+              className="advanced-fields"
+              hidden={!advanced}
+              style={{ display: advanced ? undefined : "none" }}
+              onInvalid={() => setAdvanced(true)}
+            >
+              <label>
+                Quality threshold
+                <input
+                  name="quality_threshold"
+                  type="number"
+                  min={50}
+                  max={100}
+                  defaultValue={
+                    initial?.quality_threshold ??
+                    settings.preferences.quality_threshold ??
+                    80
+                  }
+                />
+              </label>
+              <label>
+                Maximum automatic revisions
+                <input
+                  name="max_revisions"
+                  type="number"
+                  min={0}
+                  max={2}
+                  defaultValue={
+                    initial?.max_revisions ??
+                    settings.preferences.max_revisions ??
+                    1
+                  }
+                />
+              </label>
+            </div>
             <Button
               className="full-button"
-              disabled={busy || uploading}
+              disabled={busy || uploading || !settings.providers[mode]}
               type="submit"
             >
               {busy ? (
@@ -440,6 +517,12 @@ export default function CreateWorkflow() {
               Launch agent team
               <ArrowRight size={16} />
             </Button>
+            {!settings.providers[mode] && (
+              <p role="alert">
+                This provider is unavailable. Choose a configured execution mode
+                to launch.
+              </p>
+            )}
             <p className="center-note">You approve every final draft.</p>
           </section>
           <div className="creation-promise">

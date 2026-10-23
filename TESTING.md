@@ -1,17 +1,17 @@
 # Testing and recorded results
 
-Validated on 22 October 2026 in the cloud workspace. These results describe this checkout; GitHub Actions has its own run history.
+Backend tests, Python diagnostics, TypeScript, the production build, and the full browser suite were validated on 23 October 2026 in the cloud workspace. Installation, migration drift, dependency audit, and standalone smoke results below were recorded on 22 October. These results describe this checkout; GitHub Actions has its own run history.
 
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 43 passed |
+| Backend, `.venv/bin/pytest -q` | 46 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Alembic schema drift check | No new upgrade operations detected |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 9 passed across final validation runs: 7 workflow/recovery checks plus 2 campaign-library checks |
+| Playwright against the production web/API containers | 12 passed in one run: 3 duplication, 3 workflow, 2 campaign-library, and 4 recovery checks |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 | SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 
@@ -56,6 +56,8 @@ Export tests inspect ZIP contents, manifest checksums, reproducible downloads, U
 Campaign library tests seed 125 persisted workflows and verify pagination beyond the legacy picker limit, stable ordering when timestamps tie, literal wildcard searches, combined status/title filters, input bounds, and workspace isolation for both results and counts. Browser coverage checks paging, search, status and sort filters, reload/back navigation, empty/out-of-range pages, mobile layout, and retry after an API error.
 
 The final campaign-library browser run also verifies that a selected campaign remains available when absent from the recent-items picker. The mobile width check waits for the responsive sidebar transition to settle before measuring overflow.
+
+Campaign duplication tests verify that reading a reusable brief performs no writes, enforces workspace ownership, excludes project IDs and internal revision feedback, preserves live source selection and custom constraints, and resets demo references. Launching a copy of an approved campaign produces new drafts that require their own approval, while the original remains unchanged. Browser tests cover prefilled fields and custom tones, edited advanced settings retained when collapsed, separate campaign creation, missing-campaign retry, unavailable-provider handling, older selected sources, preserving edits during a settings refresh failure, and the mobile layout. The unavailable-provider browser scenario uses intercepted brief/settings/source fixtures and makes no live model calls.
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 
