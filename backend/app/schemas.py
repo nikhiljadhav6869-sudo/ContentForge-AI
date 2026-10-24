@@ -15,6 +15,27 @@ class ProjectInput(BaseModel):
     description: str = Field(default="", max_length=2000)
 
 
+class PasswordResetRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+    @field_validator("email")
+    @classmethod
+    def single_address(cls, value):
+        from email.headerregistry import Address
+        from email.errors import HeaderParseError
+
+        try:
+            Address(addr_spec=value)
+        except (ValueError, HeaderParseError):
+            raise ValueError("Enter a valid email address.") from None
+        return value.lower()
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=43, max_length=43, pattern=r"^[A-Za-z0-9_-]+$")
+    password: str = Field(min_length=10, max_length=128)
+
+
 class Brief(BaseModel):
     project_id: str | None = None
     prompt: str = Field(min_length=10, max_length=4000)

@@ -1,22 +1,23 @@
 # Testing and recorded results
 
-Backend tests, Python diagnostics, TypeScript, the production build, and the full browser suite were validated on 23 October 2026 in the cloud workspace. Installation, migration drift, dependency audit, and standalone smoke results below were recorded on 22 October. These results describe this checkout; GitHub Actions has its own run history.
+Password recovery, backend tests, Python diagnostics, TypeScript, the production build, database migrations, and browser journeys were validated on 24 October 2026 in the cloud workspace. HTTPS deployment and backup/restore checks were recorded on 23 October; installation, dependency audit, and the earlier standalone workflow smoke checks were recorded on 22 October. These results describe this checkout; GitHub Actions has its own run history.
 
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 140 passed |
+| Backend, `.venv/bin/pytest -q` | 164 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; four expected public-configuration failures for local demo settings |
 | Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; separate volumes; Caddy validated with network disabled |
 | Isolated HTTPS deployment | Passed with a trusted local CA: web/API routing, HTTP redirect, HSTS, secure login, guest rejection, cross-origin rejection, and rejection of an untrusted certificate |
 | Account-based HTTPS workflow smoke | Passed: PostgreSQL, Redis/RQ, 10 agents, 187 events, 4 artifacts, 9 ZIP members, and SSE event replay |
 | Database backup and isolated restore | Passed: archive checksum verified; all 24 public tables restored with matching row counts and content digests, including application data and checkpoints |
-| Alembic schema drift check | No new upgrade operations detected |
+| Alembic schema drift check | Passed on SQLite and PostgreSQL after migration 0002; LangGraph checkpoint tables retain their separate ownership |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 15 passed in one full run: 3 calendar, 3 duplication, 3 workflow, 2 campaign-library, and 4 recovery checks |
+| Playwright against the production web/API containers | 19 passed in one full run: 3 calendar, 3 duplication, 3 workflow, 2 campaign-library, 4 connection/account recovery, and 4 password recovery checks |
+| Password recovery against PostgreSQL | Passed: real browser reset, mobile form, session revocation, new-password login, replay rejection, and simultaneous-reset serialization; email delivery captured in process |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 | SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 
@@ -78,9 +79,9 @@ Calendar rescheduling tests verify timezone normalization, future-date validatio
 
 Calendar download tests inspect MIME type, attachment filename, private/no-store handling, CRLF line endings, UTC timestamps, stable event identifiers after rescheduling, the pinned version reference, demo labels, workspace isolation, and cancelled-reminder rejection. Unicode titles are folded to at most 75 UTF-8 octets per line without splitting characters; escaped title data cannot inject additional events or attendees. Browser coverage downloads real files, checks updated timestamps after a move, verifies retry after an intercepted server error, and inspects the mobile controls. Imports into third-party calendar applications have not been tested; imported files are manual snapshots with no synchronization.
 
-The operator-only preflight change adds 38 test cases. Frontend/browser results above remain from the preceding calendar-download validation; no frontend code changed for preflight.
+The operator-only preflight change added 38 test cases. No frontend code changed in that release. Its migration test now also rejects the previous schema revision until password-recovery migration 0002 is installed.
 
-The HTTPS deployment change adds 35 backend test cases for accepted/rejected domain names, configuration injection, random independent passwords, owner-only file creation, existing configuration preservation, and symlink protection. Python diagnostics also passed for the new deployment scripts and updated smoke script. No frontend code changed; the prior browser/build results remain applicable to that code.
+The HTTPS deployment change added 35 backend test cases for accepted/rejected domain names, configuration injection, random independent passwords, owner-only file creation, existing configuration preservation, and symlink protection. Python diagnostics also passed for the new deployment scripts and updated smoke script. No frontend code changed in that release.
 
 The HTTPS runtime check used a separate `contentforge-https-validation` Compose project and fresh data volumes, the existing validated application images, and the new Caddy configuration. The test-only override bound the proxy to loopback ports, used `localhost` and a local CA, and adjusted the browser origin to the test port. TLS verification was enabled throughout; an explicit untrusted-root request failed as expected. The real database, migrations, checkpoint tables, queue, worker heartbeat, secure-cookie setting, and disabled guest setting passed preflight. Its public-origin check intentionally rejected localhost. The application flow was verified with password-account login and the labeled demo provider. Public ACME issuance and live model generation were not tested. Disposable test containers and volumes were removed after validation; local demo data was retained.
 
@@ -92,6 +93,12 @@ Deployment preflight tests cover explicit configuration-only operation, public-o
 
 The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ worker, and the PostgreSQL LangGraph checkpointer. It resumes a human-interrupted workflow and checks exported artifacts.
 
+Password recovery adds 21 backend cases covering hashed-token storage, uniform request responses, normalization, persisted request cooldowns, latest-link replacement, expiry, replay, invalid passwords, cross-origin requests, failed-mail redaction and invalidation, single-winner concurrent consumption, revocation of existing sessions, stale-login rejection, preservation of other accounts, missing configuration, recipient/header injection, verified STARTTLS/implicit TLS configuration, and invalid frontend origins. Two migration tests verify that LangGraph's tables are excluded from removal detection while unrelated schema drift still fails.
+
+Four browser cases cover entry from sign-in, unavailable mail configuration, failed availability checks, request retry, matching passwords, reset retry, missing/expired links, URL-fragment removal, refresh behavior, and mobile overflow. These repeatable UI cases intercept mail-related API responses. A separate real browser exercise used an isolated test account in the running PostgreSQL application, captured the delivery callback in process, and completed the actual reset endpoint through the production frontend. It verified that the previous browser session lost access, the old password failed, the new password succeeded, and replay failed. A separate PostgreSQL concurrency check confirmed exactly one reset winner and rejection of session issuance authenticated with the old password.
+
 ## Limits of validation
+
+No real SMTP provider credentials were available and no external recovery email was sent. TLS modes are covered with mocked SMTP connections; successful delivery to an external mailbox remains an operator check. Recovery is disabled until mail settings are configured. The migration was checked against the existing PostgreSQL/checkpoint database and local SQLite; a private PostgreSQL backup was taken before the upgrade.
 
 Live paid provider credentials were unavailable, and Ollama was not running; live generation is not verified against external models. General public website retrieval was not exhaustively tested. No public deployment, load test, independent penetration test, or social publishing integration was performed. Semantic claim extraction and quality scores are transparent heuristics, not certified fact checking. GitHub Actions is configured but its remote result must be checked separately.

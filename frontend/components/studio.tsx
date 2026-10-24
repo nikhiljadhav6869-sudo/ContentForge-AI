@@ -34,6 +34,7 @@ import { useUI } from "@/lib/store";
 import { Button } from "./ui/button";
 import { Loading, ErrorState } from "./shared";
 import Landing from "./landing";
+import PasswordRecovery from "./password-recovery";
 import {
   Dashboard,
   Analytics,
@@ -87,22 +88,24 @@ export default function Studio() {
   } = useUI();
   const [signingOut, setSigningOut] = useState(false);
   const isLanding = pathname === "/";
+  const isRecovery =
+    pathname === "/forgot-password" || pathname === "/reset-password";
   const me = useQuery({
     queryKey: ["me"],
     queryFn: () =>
       api<{ name: string; workspace: string; workspace_id: string }>("/me"),
-    enabled: !isLanding,
+    enabled: !isLanding && !isRecovery,
   });
   const runId = workspaceId === me.data?.workspace_id ? storedRunId : null;
   const runs = useQuery({
     queryKey: ["runs"],
     queryFn: () => api<Run[]>("/workflows"),
-    enabled: !!me.data,
+    enabled: !!me.data && !isRecovery,
   });
   const preferences = useQuery({
     queryKey: ["settings"],
     queryFn: () => api<Settings>("/settings"),
-    enabled: !!me.data,
+    enabled: !!me.data && !isRecovery,
   });
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
@@ -150,6 +153,10 @@ export default function Studio() {
     setCommand(false);
   };
   if (isLanding) return <Landing />;
+  if (isRecovery)
+    return (
+      <PasswordRecovery key={pathname} reset={pathname === "/reset-password"} />
+    );
   if (me.isLoading)
     return (
       <div className="standalone">

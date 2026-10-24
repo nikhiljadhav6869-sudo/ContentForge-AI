@@ -45,7 +45,11 @@ The graph uses persistent checkpointers, conditional edges, a maximum of two aut
 
 ## Persistence
 
-Normalized SQLAlchemy tables cover users, workspaces, sessions, projects, requests, runs, events, executions, sources, passages, artifacts, versions, claims, evidence links, quality evaluations, reviews, comments, publishing jobs, and usage records. Every workspace belongs to one account in this version; shared-workspace membership and enterprise roles are not implemented.
+Normalized SQLAlchemy tables cover users, workspaces, sessions, password resets, projects, requests, runs, events, executions, sources, passages, artifacts, versions, claims, evidence links, quality evaluations, reviews, comments, publishing jobs, and usage records. Every workspace belongs to one account in this version; shared-workspace membership and enterprise roles are not implemented.
+
+Password recovery stores one hashed, expiring token per account with a persisted request cooldown. Email delivery uses verified SMTP TLS and runs after a uniform HTTP response; it is best effort rather than a durable mail queue. Reset consumption, password replacement, and session revocation share a transaction. Session issuance locks the account and checks the password hash that authenticated the login, preventing an old-password login from issuing a session after reset. Email link fragments keep bearer tokens out of request URLs; the browser retains them only in component memory.
+
+Alembic owns application tables, including the `0002` password-reset table. LangGraph owns its four checkpoint tables and initializes them through its own setup. Migration autogeneration excludes only those checkpoint tables from removal detection; unexpected application tables still trigger schema drift checks.
 
 Artifacts retain immutable versions. Claims point to a particular version and character span. Evidence links point to persisted passages, which point to source documents with content hashes. Execution IDs connect generated artifacts and evaluated claims to responsible agents. Reviews pin the exact approved version IDs. Calendar entries pin the approved artifact version.
 

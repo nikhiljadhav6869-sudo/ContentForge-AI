@@ -15,6 +15,10 @@ const config: NextConfig = {
   async headers() {
     return [
       {
+        source: "/:recovery(forgot-password|reset-password)",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },

@@ -368,6 +368,11 @@ export default function Landing() {
                 <ArrowRight size={15} />
               </Button>
             </form>
+            {auth === "login" && (
+              <Link className="text-button" href="/forgot-password">
+                Forgot your password?
+              </Link>
+            )}
             <button
               className="text-button"
               onClick={() => setAuth(auth === "login" ? "register" : "login")}

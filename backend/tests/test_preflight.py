@@ -109,7 +109,7 @@ def test_probe_errors_are_redacted_and_other_checks_continue(configured, monkeyp
     assert "secret-sentinel" not in json.dumps(result)
 
 
-@pytest.mark.parametrize("revisions, expected", [(["0001"], "pass"), ([], "fail"), (["old"], "fail")])
+@pytest.mark.parametrize("revisions, expected", [(["0002"], "pass"), (["0001"], "fail"), ([], "fail"), (["old"], "fail")])
 def test_database_probe_checks_migration_without_writes(configured, monkeypatch, revisions, expected):
     import sqlalchemy
 

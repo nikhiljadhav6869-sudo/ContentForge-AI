@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
-from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Query
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pypdf import PdfReader
@@ -47,6 +47,8 @@ from .db import (
 )
 from .schemas import (
     Credentials,
+    PasswordResetRequest,
+    PasswordResetConfirm,
     ProjectInput,
     Brief,
     TextSource,
@@ -60,6 +62,7 @@ from .schemas import (
     EvidenceInput,
 )
 from .auth import identity, hash_password, check_password, issue_session
+from . import password_recovery
 from .sources import store_source, fetch_url, DEMO_SOURCES, MAX_BYTES
 from .gateway import availability
 from .events import emit
@@ -202,8 +205,28 @@ def login(body: Credentials, response: Response):
         user = db.scalar(select(User).where(User.email == body.email.lower()))
         if not user or not check_password(body.password, user.password_hash):
             raise HTTPException(401, "Email or password is incorrect.")
-        issue_session(response, user.id)
+    issue_session(response, user.id, expected_password_hash=user.password_hash)
     return {"ok": True}
+
+
+@app.get("/api/auth/options")
+def auth_options():
+    return {"password_reset": password_recovery.available()}
+
+
+@app.post("/api/auth/forgot-password", status_code=202)
+def forgot_password(body: PasswordResetRequest, tasks: BackgroundTasks):
+    if not password_recovery.available():
+        raise HTTPException(503, "Password recovery is unavailable. Contact the site operator.")
+    tasks.add_task(password_recovery.request_reset, body.email)
+    return {"message": password_recovery.RESET_MESSAGE}
+
+
+@app.post("/api/auth/reset-password")
+def reset_password(body: PasswordResetConfirm, response: Response):
+    password_recovery.confirm_reset(body.token, body.password)
+    response.delete_cookie("cf_session", path="/")
+    return {"message": "Password updated. Sign in with your new password."}
 
 
 @app.post("/api/auth/demo")

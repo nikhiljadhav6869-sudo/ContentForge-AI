@@ -82,6 +82,26 @@ Deploy the backend separately on a persistent container service with PostgreSQL,
 
 No hosting account, DNS record, TLS certificate, or external publication integration is provisioned by this repository.
 
+## Password recovery email
+
+Configure these server-only variables in `.env.production` for production Compose, root `.env` for local Compose, or `backend/.env` for non-container development:
+
+| Variable | Purpose |
+| --- | --- |
+| `SMTP_HOST` | Mail provider's SMTP hostname; empty disables recovery |
+| `SMTP_PORT` | Provider's port, normally 587 for STARTTLS or 465 for implicit TLS |
+| `SMTP_SECURITY` | `starttls` (default) or `ssl`; plaintext transport is not supported |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | Provider's SMTP credentials; both set or both empty for an authenticated relay environment |
+| `SMTP_FROM` | A single sender address authorized by your mail provider |
+
+`FRONTEND_ORIGIN` must be the exact public HTTPS origin for reset links. HTTP is allowed only for loopback development. Links use this configured origin, never the request's Host header. Restart/recreate the API after configuration changes; Compose environment updates require `up -d` with the appropriate env file and overrides. Existing deployments need migration `0002`, applied automatically when the rebuilt API starts; local development uses `cd backend && .venv/bin/alembic upgrade head`.
+
+Configure the sender/domain with your mail provider and verify delivery to an account you control before inviting users. SMTP uses certificate/hostname verification, a ten-second socket timeout, and no fallback to plaintext. No provider-specific SMTP credentials are included. The public availability endpoint reports configuration presence, not verified mailbox delivery; deployment preflight does not test SMTP.
+
+Forgot-password requests receive the same accepted response for known and unknown valid addresses. Actual delivery runs after the HTTP response and is best effort, with a persisted 60-second cooldown per account in addition to the existing per-process IP throttle. There is no durable mail queue or automatic retry. Delivery errors produce a fixed server warning without addresses, tokens, credentials, or SMTP exception details; a failed link is invalidated. Check mail-provider operations if users do not receive messages.
+
+Reset links expire after 30 minutes and are single-use. Only a token hash is stored in PostgreSQL/SQLite. Tokens travel in the email link fragment, which is excluded from HTTP request URLs, and are removed from the browser address bar once read. The reset form retains the token only in memory; reloading requires reopening the complete email link. Do not configure infrastructure to log reset request bodies. Successful resets revoke every existing session for that account and require a fresh sign-in. Other accounts, workspaces, campaigns, and content remain unchanged. Email verification, SSO, and MFA remain separate features.
+
 ## Models and sources
 
 Provider keys are read only by backend processes. Set `OPENAI_API_KEY`/`OPENAI_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL`, or the Ollama URL/model. OpenAI-compatible endpoints must implement the JSON chat-completions interface. Restart API and workers after changes. Compose maps `host.docker.internal` for an optional host Ollama server; install its selected model separately.
@@ -140,7 +160,7 @@ The test database has no network access or published ports; its temporary data d
 - RQ jobs have a 30-minute limit. Worker failures are recorded as interrupted; the owner can resume from a checkpoint. A provider request already in flight may finish before cancellation is observed.
 - Local mode uses one API process and a thread pool. Do not run multiple SQLite/local-queue replicas.
 - Write and login throttles are process-local. Add trusted edge rate limiting, workload quotas, monitoring, and a shared limit store before an Internet-facing multi-replica deployment.
-- Authentication supports password accounts and per-account workspaces. SSO, password reset, email verification, shared-workspace roles, MFA, and a complete compliance program are not included.
+- Authentication supports password accounts, SMTP password recovery, and per-account workspaces. SSO, email verification, shared-workspace roles, MFA, and a complete compliance program are not included.
 - Public sign-up and guest creation need operational quotas if enabled. Keep the demo local or disable guest sign-in.
 - Rich editor changes persist as plain text. External publishing and autonomous search are not implemented.
 

@@ -3,7 +3,7 @@ import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
 from fastapi import Cookie, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 from .config import settings
 from .db import Session, SessionToken, User, Workspace
 
@@ -23,9 +23,16 @@ def check_password(password, stored):
         return False
 
 
-def issue_session(response, user_id):
+def issue_session(response, user_id, expected_password_hash=None):
     token = secrets.token_urlsafe(32)
     with Session.begin() as db:
+        # Serialize session creation with password changes, including a login
+        # that verified the old password just before a reset completed.
+        lock = update(User).where(User.id == user_id)
+        if expected_password_hash is not None:
+            lock = lock.where(User.password_hash == expected_password_hash)
+        if not db.execute(lock.values(password_hash=User.password_hash)).rowcount:
+            raise HTTPException(401, "Account credentials changed. Please sign in again.")
         db.add(
             SessionToken(
                 user_id=user_id,

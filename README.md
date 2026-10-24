@@ -72,6 +72,12 @@ In **Publishing calendar → Upcoming drafts**, click **Download .ics** on a rem
 
 Calendar downloads are snapshots, not subscriptions or invitations. After moving or cancelling a reminder, update or remove an earlier imported event manually; importing a newer file may create a duplicate depending on the calendar app. Downloads contain reminder metadata, not the full content draft, and do not publish content.
 
+## Recover an account
+
+Choose **Sign in → Forgot your password?**, enter your account email, and open the link from your email. Choose and confirm a new password, then sign in again. Links expire after 30 minutes, work once, and are replaced by a newer request. A successful reset signs out existing sessions while preserving your workspace and campaigns.
+
+Email recovery requires the operator's [SMTP configuration](DEPLOYMENT.md#password-recovery-email). If delivery is not configured, the page explains that recovery is unavailable. Request confirmations do not reveal whether an address has an account. Email verification at registration remains a separate, unimplemented feature.
+
 ## Connect live models
 
 For local development, copy `backend/.env.example` to `backend/.env`. For Compose, edit the root `.env`. Set the provider variables on the server, then restart the API and worker:

@@ -43,6 +43,14 @@ class SessionToken(Entity, Base):
     expires_at: Mapped[str] = mapped_column(String(40))
 
 
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[str] = mapped_column(String(40))
+    requested_at: Mapped[str] = mapped_column(String(40))
+
+
 class Project(Entity, Base):
     __tablename__ = "projects"
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
