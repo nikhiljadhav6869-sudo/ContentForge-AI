@@ -15,6 +15,10 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 scripts/check_deployment.py
+      - name: Validate generated backup schedule without enabling it
+        run: |
+          python3 scripts/configure_backup_schedule.py --production --output-directory "$RUNNER_TEMP/contentforge-backup-units" --backup-directory "$RUNNER_TEMP/contentforge-backups"
+          systemd-analyze verify "$RUNNER_TEMP/contentforge-backup-units/"*.service "$RUNNER_TEMP/contentforge-backup-units/"*.timer
       - name: Validate HTTPS proxy configuration without network access
         run: >-
           docker run --rm --network none -e DOMAIN=studio.example.com

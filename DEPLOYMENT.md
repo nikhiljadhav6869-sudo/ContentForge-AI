@@ -145,7 +145,7 @@ python3 scripts/backup.py --output .data/backups/before-upgrade.dump
 python3 scripts/backup.py --production --output .data/backups/production-before-upgrade.dump
 ```
 
-The command reads the selected stack's PostgreSQL database, checks the archive catalog, and prints its size and SHA-256 checksum. It creates the archive with owner-only permissions, refuses to replace an existing path, and removes partial files on failure. An archive becomes visible under its final name only after dumping and catalog validation succeed. New backup directories are private. Existing directories keep their permissions. Use a fresh filename for each backup; retention and scheduling are operator-managed.
+The command reads the selected stack's PostgreSQL database, checks the archive catalog, and prints its size and SHA-256 checksum. It creates the archive with owner-only permissions, refuses to replace an existing path, and removes partial files on failure. An archive becomes visible under its final name only after dumping and catalog validation succeed. New backup directories are private. Existing directories keep their permissions. Use a fresh filename for each manual backup. The scheduled runner below generates unique names and records checksums; retention remains operator-managed.
 
 The archive contains application data, account/password hashes, saved sessions, extracted source text, and LangGraph checkpoints in the standard shared PostgreSQL database. It is not encrypted. Store protected, encrypted copies outside the server, and keep configuration/provider secrets and Caddy certificate state separately. Redis jobs, `.env` files, TLS state, external databases, and local SQLite files are not included. The script targets the standard project names and database/user from this repository; a customized or externally hosted database needs its own backup procedure.
 
@@ -173,6 +173,59 @@ docker stop contentforge-restore-check
 ```
 
 The test database has no network access or published ports; its temporary data disappears when stopped. Check the saved checksum and inspect the restored records before treating a backup as usable. For actual recovery, restore into a fresh deployment database before starting application services, verify it, and retain the old deployment until recovery is confirmed. Redis queue state is separate: review unfinished workflows and their checkpoints before enabling workers. Never run this restore against a serving application database.
+
+### Daily backup schedule and freshness checks
+
+The scheduled runner builds on `scripts/backup.py`. It creates a unique UTC timestamped archive, a private JSON manifest containing its size/checksum/completion time, and an atomic latest-success pointer. A per-directory file lock prevents overlapping scheduled runners, including separate processes. Local and production stacks use separate filenames and latest-success pointers. The pointer is replaced only after the archive and manifest have been written successfully; failures before that step leave the previous pointer intact. Completed archives are preserved if a later metadata operation fails. A final directory-sync failure can report failure after the pointer was replaced, so use the read-only check to assess the referenced archive.
+
+On the **deployment server**, using Python 3.11+ and the account that can already access Docker, first run a backup manually:
+
+```bash
+python3 scripts/scheduled_backup.py --production --directory "$PWD/.data/backups/scheduled-production"
+python3 scripts/scheduled_backup.py --production --directory "$PWD/.data/backups/scheduled-production" --check
+```
+
+The destination must be a private directory owned by that account, with permissions `0700`. Missing directories are created privately. Existing directories are not chmodded; a shared or symlinked destination is rejected. Archives, manifests, pointers, and lock files must be private regular files owned by the same account. Existing backup files are never overwritten or automatically deleted. Do not edit a manifest or pointer to make a failed check pass.
+
+Generate the user service and daily timer into a **new** output directory:
+
+```bash
+python3 scripts/configure_backup_schedule.py --production \
+  --output-directory .data/backup-units \
+  --backup-directory "$PWD/.data/backups/scheduled-production"
+systemd-analyze verify .data/backup-units/*.service .data/backup-units/*.timer
+cat .data/backup-units/contentforge-production-backup.service
+cat .data/backup-units/contentforge-production-backup.timer
+```
+
+Generation only writes reviewable files; it never installs, starts, or enables a timer. Paths are resolved for the machine where you run the generator. Keep the checkout, Python interpreter, and backup directory in those locations, or regenerate/reinstall the units after moving them. Paths with internal spaces work; control characters, trailing spaces, quotes, backslashes, dollar signs, and percent signs are rejected. The default schedule is **02:00 UTC daily (07:30 India time)**, with up to ten minutes of randomized delay. Use `--hour-utc 4`, for example, to choose 04:00 UTC. `Persistent=true` requests one catch-up run after a missed schedule when the user manager becomes available.
+
+After reviewing the generated files, install them on a Linux server with systemd user services. Preserve any previously installed units before replacing them:
+
+```bash
+install -d -m 700 "$HOME/.config/systemd/user"
+install -m 600 .data/backup-units/contentforge-production-backup.service "$HOME/.config/systemd/user/"
+install -m 600 .data/backup-units/contentforge-production-backup.timer "$HOME/.config/systemd/user/"
+systemctl --user daemon-reload
+systemctl --user start contentforge-production-backup.service
+systemctl --user enable --now contentforge-production-backup.timer
+systemctl --user list-timers --all contentforge-production-backup.timer
+journalctl --user -u contentforge-production-backup.service -n 30 --no-pager
+```
+
+The service account must retain Docker access and read access to the repository's private production configuration. For unattended operation after logout, the server administrator must enable lingering for that account using `loginctl enable-linger`. Verify the timer after reboot. A generated or syntax-validated timer is not proof that it is active. The cloud development workspace has no running systemd manager, so this release does not enable a timer there or on an external server. For local Compose, omit `--production`; the generated unit names are `contentforge-backup.service` and `.timer`.
+
+A monitoring job can independently check freshness and the entire archive checksum:
+
+```bash
+python3 scripts/scheduled_backup.py --production \
+  --directory "$PWD/.data/backups/scheduled-production" \
+  --check --max-age-hours 26
+```
+
+Exit **0** reports a fresh, checksum-matching archive; exit **1** reports failure, with JSON output and redacted operational errors. Invalid CLI arguments use exit **2**. `--check` is read-only, makes no Docker/database calls, and reads the entire latest archive to verify its checksum. It rejects missing files, mismatched size/hash, invalid or cross-stack metadata, unsafe files/symlinks, future timestamps, and archives older than the threshold. The default threshold is 26 hours. A previous successful archive may still pass after a more recent backup attempt fails, until that archive becomes stale; use the service status and journal to inspect the latest attempt. No external notification is sent automatically.
+
+The manifest is local integrity metadata, not a cryptographic signature. Neither successful creation nor a freshness check proves restoration: both retain `restore_verified: false`. Continue the isolated restore checks above. This setup does not encrypt or upload archives off-server, delete older copies, impose a disk quota, or back up configuration/TLS/Redis state. Monitor available disk space and apply a reviewed retention/off-server-copy policy. An abruptly killed process can leave hidden `.partial` files; these are never accepted as successful backups. A lost server can lose its on-server backups too.
 
 ### Workspace workflow allowances
 

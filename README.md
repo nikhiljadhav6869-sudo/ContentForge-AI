@@ -46,6 +46,7 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - **Campaign library:** title search, status filters, newest/oldest ordering, and server-side pagination across your campaign history. Filters stay in the page URL for reloads and browser navigation.
 - **Duplicate campaigns:** review and edit a saved brief, audience, formats, source selection, and quality settings before launching a separate campaign with fresh drafts and approval.
 - PostgreSQL/SQLite persistence, Alembic migrations, Redis/RQ worker, local fallback queue, Docker configuration, tests, and CI.
+- **Scheduled backup tooling:** private archives and checksum manifests, overlap protection, freshness checks, and generated daily systemd units. See [server installation instructions](DEPLOYMENT.md#daily-backup-schedule-and-freshness-checks); generation does not activate a timer.
 
 ## Find a campaign
 
