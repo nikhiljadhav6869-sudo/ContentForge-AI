@@ -17,6 +17,7 @@ def configured():
         frontend_origin="https://studio.example.com",
         secure_cookies=True,
         demo_auth=False,
+        registration_enabled=False,
         database_url="postgresql+psycopg://user:secret-sentinel@db/app",
         checkpoint_url="postgresql://user:secret-sentinel@db/checkpoints",
         redis_url="redis://:secret-sentinel@queue/0",
@@ -46,11 +47,15 @@ def test_offline_is_explicit_and_never_runs_probes(configured, monkeypatch):
     assert "generation" in result["not_verified"][0]
     assert "secret-sentinel" not in json.dumps(result)
     configured.demo_auth = True
+    configured.registration_enabled = True
     configured.secure_cookies = False
     configured.openai_api_key = ""
     result = preflight.report(configured, "openai", offline=True)
     assert not result["passed"]
-    assert all(statuses(result)[key] == "fail" for key in ["guest_access", "secure_cookies", "provider_config"])
+    assert all(
+        statuses(result)[key] == "fail"
+        for key in ["guest_access", "public_registration", "secure_cookies", "provider_config"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -109,7 +114,9 @@ def test_probe_errors_are_redacted_and_other_checks_continue(configured, monkeyp
     assert "secret-sentinel" not in json.dumps(result)
 
 
-@pytest.mark.parametrize("revisions, expected", [(["0003"], "pass"), (["0002"], "fail"), ([], "fail"), (["old"], "fail")])
+@pytest.mark.parametrize(
+    "revisions, expected", [(["0003"], "pass"), (["0002"], "fail"), ([], "fail"), (["old"], "fail")]
+)
 def test_database_probe_checks_migration_without_writes(configured, monkeypatch, revisions, expected):
     import sqlalchemy
 

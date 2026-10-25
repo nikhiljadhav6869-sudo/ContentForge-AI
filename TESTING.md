@@ -1,14 +1,14 @@
 # Testing and recorded results
 
-Email verification, backend tests, Python diagnostics, TypeScript, the production build, database migrations, and browser journeys were validated on 25 October 2026 in the cloud workspace. The real password-recovery checks were recorded on 24 October, HTTPS deployment and backup/restore on 23 October, and installation, dependency audit, and earlier standalone workflow smoke checks on 22 October. These results describe this checkout; GitHub Actions has its own run history.
+Controlled registration, backend tests, Python diagnostics, TypeScript, the production build, and browser journeys were validated on 25 October 2026 in the cloud workspace. The real password-recovery checks were recorded on 24 October, HTTPS deployment and backup/restore on 23 October, and installation, dependency audit, and earlier standalone workflow smoke checks on 22 October. These results describe this checkout; GitHub Actions has its own run history.
 
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 176 passed |
+| Backend, `.venv/bin/pytest -q` | 190 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
-| Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; four expected public-configuration failures for local demo settings |
-| Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; separate volumes; Caddy validated with network disabled |
+| Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; five expected public-configuration failures for local demo settings |
+| Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; registration closed by default with explicit opt-in tested; separate volumes; Caddy previously validated with network disabled |
 | Isolated HTTPS deployment | Passed with a trusted local CA: web/API routing, HTTP redirect, HSTS, secure login, guest rejection, cross-origin rejection, and rejection of an untrusted certificate |
 | Account-based HTTPS workflow smoke | Passed: PostgreSQL, Redis/RQ, 10 agents, 187 events, 4 artifacts, 9 ZIP members, and SSE event replay |
 | Database backup and isolated restore | Passed: archive checksum verified; all 24 public tables restored with matching row counts and content digests, including application data and checkpoints |
@@ -16,7 +16,8 @@ Email verification, backend tests, Python diagnostics, TypeScript, the productio
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 22 passed in one full run: 3 calendar, 3 duplication, 3 email verification, 3 workflow, 2 campaign-library, 4 connection/account recovery, and 4 password recovery checks |
+| Playwright against the production web/API containers | All 25 cases passed: 24 in the full run, plus the corrected registration-outage check in a targeted rerun; 3 calendar, 3 duplication, 3 email verification, 3 registration, 3 workflow, 2 campaign-library, 4 connection/account recovery, and 4 password recovery cases |
+| Controlled registration against PostgreSQL | Passed: actual hidden-input terminal provisioning, closed-sign-up enforcement, concurrent duplicate prevention, and real browser login/settings on mobile |
 | Email verification against PostgreSQL | Passed: actual browser confirmation, authentication, session preservation, persisted status, replay rejection, and concurrent confirmation; email captured in process |
 | Password recovery against PostgreSQL | Passed: real browser reset, mobile form, session revocation, new-password login, replay rejection, and simultaneous-reset serialization; email delivery captured in process |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
@@ -50,7 +51,7 @@ python3 scripts/smoke.py --base-url http://localhost:3000
 
 For production configuration checks, run `python3 scripts/check_deployment.py` with Docker Compose 2.24.4 or newer. It resolves both configurations with synthetic values, deliberately supplies insecure local defaults, and checks that the production override still enforces the intended boundaries. It never starts containers or reads the operator's `.env` files. GitHub Actions includes a separate deployment job for this check and Caddy configuration validation; its remote result must be checked separately.
 
-For an HTTPS deployment with guest sign-in disabled, first create an account, then run:
+For an HTTPS deployment with guest sign-in disabled, first provision an account using the [terminal command](DEPLOYMENT.md#control-account-registration), then run:
 
 ```bash
 python3 scripts/smoke.py --base-url https://your-domain.example.com --email your-account@example.com
@@ -107,3 +108,9 @@ Three browser cases cover settings availability, request retry, explicit confirm
 No real SMTP provider credentials were available and no external recovery email was sent. TLS modes are covered with mocked SMTP connections; successful delivery to an external mailbox remains an operator check. Recovery is disabled until mail settings are configured. The migration was checked against the existing PostgreSQL/checkpoint database and local SQLite; a private PostgreSQL backup was taken before the upgrade.
 
 Live paid provider credentials were unavailable, and Ollama was not running; live generation is not verified against external models. General public website retrieval was not exhaustively tested. No public deployment, load test, independent penetration test, or social publishing integration was performed. Semantic claim extraction and quality scores are transparent heuristics, not certified fact checking. GitHub Actions is configured but its remote result must be checked separately.
+
+Controlled-registration coverage adds 14 backend cases: direct registration rejection without session or data changes, separate guest policy, reopening, regular account provisioning with an unverified email and private workspace, login while sign-up is closed, duplicate and concurrent creation, validation, password confirmation, noninteractive-input rejection, unsafe-terminal cancellation, and redacted database failures. Browser coverage checks closed sign-up and disabled guests, existing-account login controls, mobile layout, options-service failure/retry, and a server rejection after a registration form was opened. Closed-policy/error responses are intercepted in those browser cases; backend tests enforce the actual policy. Production configuration validation proves that local open-registration defaults cannot open production accidentally and that explicit `PUBLIC_REGISTRATION=true` works.
+
+An additional check used the real interactive account-creation command in the API container with a pseudo-terminal and confirmed the password was not echoed. Against PostgreSQL, direct registration and guest requests were denied with the corresponding settings disabled, the provisioned account could log in, and two simultaneous duplicate creations yielded one account/workspace. The running API retained its normal local demo policy during this isolated application check. A separate browser signed in through the real login form and opened the new account’s settings at 390px width. No external email or provider generation was invoked.
+
+The first registration browser run passed 24/25 cases. The outage check used a broad alert selector that also matched Next.js’s route announcer; scoping it to the sign-up error resolved the ambiguity. That case passed in a targeted rerun. No application change was needed, and the other passing cases were not rerun.

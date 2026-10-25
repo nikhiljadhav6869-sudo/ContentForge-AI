@@ -33,6 +33,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
       DEMO_AUTH: ${DEMO_AUTH:-true}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}

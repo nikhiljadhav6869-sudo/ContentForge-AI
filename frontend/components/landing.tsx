@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -21,7 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { post } from "@/lib/api";
+import { api, post } from "@/lib/api";
 import { useUI } from "@/lib/store";
 import { Logo } from "./studio";
 import { Button } from "./ui/button";
@@ -29,6 +29,14 @@ import { startDemo } from "./shared";
 export default function Landing() {
   const router = useRouter();
   const client = useQueryClient();
+  const options = useQuery({
+    queryKey: ["auth-options"],
+    queryFn: () =>
+      api<{ registration: boolean; demo: boolean }>("/auth/options"),
+    retry: false,
+  });
+  const registration = options.data?.registration === true;
+  const demoEnabled = options.data?.demo === true;
   const [busy, setBusy] = useState(false);
   const [auth, setAuth] = useState<"login" | "register" | null>(null);
   async function demo() {
@@ -71,7 +79,11 @@ export default function Landing() {
           <button className="text-button" onClick={() => setAuth("login")}>
             Sign in
           </button>
-          <Button size="sm" onClick={() => setAuth("register")}>
+          <Button
+            size="sm"
+            disabled={options.isPending}
+            onClick={() => setAuth(registration ? "register" : "login")}
+          >
             Start creating <ArrowUpRight size={14} />
           </Button>
         </div>
@@ -101,23 +113,49 @@ export default function Landing() {
             in real time.
           </p>
           <div className="hero-actions">
-            <Button onClick={demo} disabled={busy}>
-              {busy ? (
-                <Loader2 size={17} className="spin" />
-              ) : (
-                <Play size={15} fill="currentColor" />
-              )}
-              Explore the live demo <ArrowRight size={16} />
-            </Button>
-            <Button variant="secondary" onClick={() => setAuth("register")}>
+            {demoEnabled && (
+              <Button onClick={demo} disabled={busy}>
+                {busy ? (
+                  <Loader2 size={17} className="spin" />
+                ) : (
+                  <Play size={15} fill="currentColor" />
+                )}
+                Explore the live demo <ArrowRight size={16} />
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              disabled={options.isPending}
+              onClick={() => setAuth(registration ? "register" : "login")}
+            >
               Build your first campaign
             </Button>
           </div>
+          {options.isError ? (
+            <div role="alert">
+              Sign-up options could not load. Existing members can still sign
+              in.{" "}
+              <button
+                className="text-button"
+                onClick={() => options.refetch()}
+                disabled={options.isFetching}
+              >
+                Retry sign-up options
+              </button>
+            </div>
+          ) : options.data && !registration ? (
+            <p>
+              Account registration is closed. Contact the site operator for
+              access.
+            </p>
+          ) : null}
           <div className="hero-notes">
-            <span>
-              <Check size={13} />
-              No API key for demo
-            </span>
+            {demoEnabled && (
+              <span>
+                <Check size={13} />
+                No API key for demo
+              </span>
+            )}
             <span>
               <Check size={13} />
               Evidence you can inspect
@@ -241,7 +279,11 @@ export default function Landing() {
               Research <ArrowRight size={14} /> Write <ArrowRight size={14} />{" "}
               Verify <ArrowRight size={14} /> Review
             </div>
-            <Button variant="ghost" onClick={demo}>
+            <Button
+              variant="ghost"
+              onClick={demoEnabled ? demo : () => setAuth("login")}
+              disabled={busy}
+            >
               Explore the control center <ArrowUpRight size={15} />
             </Button>
           </article>
@@ -327,60 +369,69 @@ export default function Landing() {
                 : "Make room for better ideas."}
             </h2>
             <p>Your projects, evidence, and content in one workspace.</p>
-            <form onSubmit={submit}>
-              {auth === "register" && (
+            {auth === "register" && !registration ? (
+              <p role="status">
+                Registration is unavailable. Contact the site operator for
+                access.
+              </p>
+            ) : (
+              <form onSubmit={submit}>
+                {auth === "register" && (
+                  <label>
+                    Your name
+                    <input
+                      name="name"
+                      required
+                      maxLength={80}
+                      autoComplete="name"
+                    />
+                  </label>
+                )}
                 <label>
-                  Your name
+                  Email
                   <input
-                    name="name"
+                    name="email"
+                    type="email"
                     required
-                    maxLength={80}
-                    autoComplete="name"
+                    autoComplete="email"
                   />
                 </label>
-              )}
-              <label>
-                Email
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  minLength={10}
-                  maxLength={128}
-                  required
-                  autoComplete={
-                    auth === "login" ? "current-password" : "new-password"
-                  }
-                />
-                <small>At least 10 characters</small>
-              </label>
-              <Button type="submit" disabled={busy}>
-                {busy ? <Loader2 className="spin" size={15} /> : null}
-                {auth === "login" ? "Sign in" : "Create account"}
-                <ArrowRight size={15} />
-              </Button>
-            </form>
+                <label>
+                  Password
+                  <input
+                    name="password"
+                    type="password"
+                    minLength={10}
+                    maxLength={128}
+                    required
+                    autoComplete={
+                      auth === "login" ? "current-password" : "new-password"
+                    }
+                  />
+                  <small>At least 10 characters</small>
+                </label>
+                <Button type="submit" disabled={busy}>
+                  {busy ? <Loader2 className="spin" size={15} /> : null}
+                  {auth === "login" ? "Sign in" : "Create account"}
+                  <ArrowRight size={15} />
+                </Button>
+              </form>
+            )}
             {auth === "login" && (
               <Link className="text-button" href="/forgot-password">
                 Forgot your password?
               </Link>
             )}
-            <button
-              className="text-button"
-              onClick={() => setAuth(auth === "login" ? "register" : "login")}
-            >
-              {auth === "login"
-                ? "New here? Create an account"
-                : "Already have an account? Sign in"}
-            </button>
+            {(auth === "register" || registration) && (
+              <button
+                className="text-button"
+                onClick={() => setAuth(auth === "login" ? "register" : "login")}
+              >
+                {auth === "login"
+                  ? "New here? Create an account"
+                  : "Already have an account? Sign in"}
+              </button>
+            )}
           </div>
         </div>
       )}

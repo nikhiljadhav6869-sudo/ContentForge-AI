@@ -62,7 +62,7 @@ from .schemas import (
     Preferences,
     EvidenceInput,
 )
-from .auth import identity, hash_password, check_password, issue_session
+from .auth import identity, hash_password, check_password, issue_session, create_account
 from . import password_recovery
 from . import email_verification
 from .sources import store_source, fetch_url, DEMO_SOURCES, MAX_BYTES
@@ -188,13 +188,10 @@ def health():
 
 @app.post("/api/auth/register")
 def register(body: Credentials, response: Response):
+    if not settings.registration_enabled:
+        raise HTTPException(403, "Account registration is closed. Contact the site operator for access.")
     try:
-        with Session.begin() as db:
-            user = User(email=body.email.lower(), name=body.name, password_hash=hash_password(body.password))
-            db.add(user)
-            db.flush()
-            db.add(Workspace(owner_id=user.id, name=body.name + "’s workspace"))
-            user_id = user.id
+        user_id = create_account(body)
     except IntegrityError:
         raise HTTPException(409, "This email already has an account.") from None
     issue_session(response, user_id)
@@ -213,7 +210,11 @@ def login(body: Credentials, response: Response):
 
 @app.get("/api/auth/options")
 def auth_options():
-    return {"password_reset": password_recovery.available()}
+    return {
+        "password_reset": password_recovery.available(),
+        "registration": settings.registration_enabled,
+        "demo": settings.demo_auth,
+    }
 
 
 @app.post("/api/auth/forgot-password", status_code=202)

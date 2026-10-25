@@ -11,6 +11,7 @@ os.environ.update(
     REDIS_URL="",
     CHECKPOINT_URL="",
     DEMO_AUTH="true",
+    REGISTRATION_ENABLED="true",
 )
 from fastapi.testclient import TestClient
 from app.db import Base, engine

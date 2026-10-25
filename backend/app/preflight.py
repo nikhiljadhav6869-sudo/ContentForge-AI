@@ -115,6 +115,12 @@ def configuration(settings, provider):
             "Set DEMO_AUTH=false before the public deployment.",
         ),
         check(
+            "public_registration",
+            not settings.registration_enabled,
+            "Public account registration is closed.",
+            "Close public registration (REGISTRATION_ENABLED=false; PUBLIC_REGISTRATION=false in production Compose) until public-access quotas are ready.",
+        ),
+        check(
             "database_config",
             database_ok,
             "PostgreSQL application connection is configured.",

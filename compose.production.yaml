@@ -11,6 +11,7 @@ services:
     environment: &production-env
       FRONTEND_ORIGIN: https://${DOMAIN:?Run python3 scripts/configure_production.py --domain your.domain first}
       DEMO_AUTH: "false"
+      REGISTRATION_ENABLED: ${PUBLIC_REGISTRATION:-false}
       SECURE_COOKIES: "true"
   worker:
     environment: *production-env

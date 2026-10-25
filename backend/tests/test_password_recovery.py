@@ -157,7 +157,7 @@ def test_other_account_session_and_password_are_preserved(client, mailbox):
 def test_unconfigured_recovery_is_honest_and_never_sends(client, monkeypatch):
     monkeypatch.setattr(settings, "smtp_host", "")
     monkeypatch.setattr(recovery, "deliver", lambda *args: pytest.fail("Unexpected delivery"))
-    assert client.get("/api/auth/options").json() == {"password_reset": False}
+    assert client.get("/api/auth/options").json() == {"password_reset": False, "registration": True, "demo": True}
     result = client.post("/api/auth/forgot-password", json={"email": EMAIL})
     assert result.status_code == 503 and "unavailable" in result.json()["detail"]
 

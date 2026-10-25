@@ -6,6 +6,21 @@ from fastapi import Cookie, HTTPException
 from sqlalchemy import select, update
 from .config import settings
 from .db import Session, SessionToken, User, Workspace
+from .schemas import Credentials
+
+
+def create_account(credentials: Credentials) -> str:
+    """Create an unverified account and its workspace atomically; never overwrite."""
+    with Session.begin() as db:
+        user = User(
+            email=credentials.email.lower(),
+            name=credentials.name,
+            password_hash=hash_password(credentials.password),
+        )
+        db.add(user)
+        db.flush()
+        db.add(Workspace(owner_id=user.id, name=credentials.name + "’s workspace"))
+        return user.id
 
 
 def hash_password(password):

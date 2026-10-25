@@ -34,7 +34,7 @@ def main() -> int:
         env_file.write_text(
             "DOMAIN=studio.example.com\nPOSTGRES_PASSWORD=synthetic-validation-only\n"
             "OPENAI_API_KEY=synthetic-provider-key\n"
-            "FRONTEND_ORIGIN=http://unsafe.example.com\nDEMO_AUTH=true\nSECURE_COOKIES=false\n"
+            "FRONTEND_ORIGIN=http://unsafe.example.com\nDEMO_AUTH=true\nREGISTRATION_ENABLED=true\nSECURE_COOKIES=false\n"
         )
         command = [
             "docker",
@@ -89,6 +89,10 @@ def main() -> int:
                 "Production guest access was not disabled.",
             )
             require(
+                settings["REGISTRATION_ENABLED"] == "false",
+                "Production public registration was not closed by default.",
+            )
+            require(
                 settings["SECURE_COOKIES"] == "true",
                 "Secure cookies were not enforced.",
             )
@@ -126,8 +130,19 @@ def main() -> int:
                 production["volumes"][name]["name"] != local["volumes"][name]["name"],
                 "Local storage was reused.",
             )
+        with env_file.open("a") as output:
+            output.write("PUBLIC_REGISTRATION=true\n")
+        opened = render(["-f", "compose.production.yaml"])
+        require(
+            all(
+                opened["services"][name]["environment"]["REGISTRATION_ENABLED"]
+                == "true"
+                for name in ["api", "worker"]
+            ),
+            "Explicit production registration opt-in was ignored.",
+        )
         print(
-            "PASS: production ports, HTTPS/cookies, guest restrictions, settings merge, and isolated persistent volumes."
+            "PASS: production ports, HTTPS/cookies, guest/sign-up restrictions, explicit sign-up opt-in, settings merge, and isolated persistent volumes."
         )
         print(
             "PASS: local project and loopback bindings preserved. No containers started or provider requests made."

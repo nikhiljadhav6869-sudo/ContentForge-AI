@@ -37,7 +37,7 @@ docker compose --env-file .env.production -f compose.yaml -f compose.production.
 docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml exec -T api python -m app.preflight --provider openai
 ```
 
-Select `gemini` or `ollama` for preflight if appropriate. `check_deployment.py` uses synthetic configuration to check the Compose merge; it does not inspect your credentials or contact your server. The container preflight checks the running backend. Finally, open `https://` followed by your domain and create an account. Verify its demo workflow through HTTPS with:
+Select `gemini` or `ollama` for preflight if appropriate. `check_deployment.py` uses synthetic configuration to check the Compose merge; it does not inspect your credentials or contact your server. The container preflight checks the running backend. Provision an account with the terminal command below, then open `https://` followed by your domain and sign in. Verify its demo workflow through HTTPS with:
 
 ```bash
 python3 scripts/smoke.py --base-url https://studio.example.com --email your-account@example.com
@@ -51,7 +51,23 @@ The Compose project is named `contentforge-production`, with its own database an
 
 For upgrades, back up PostgreSQL and configuration first, fetch the reviewed release, and repeat the production `up --build -d` command. This single-server setup can have brief downtime during an upgrade. For a build requiring the trusted CA override below, add `-f compose.ca.yaml` after `-f compose.production.yaml` and supply `CONTENTFORGE_BUILD_CA` when building.
 
-Public account registration remains enabled. Each account has its own workspace, but configured provider credentials are server-wide. Use controlled access and suitable quotas before admitting untrusted users. The operational limits below still apply; this configuration alone does not establish production readiness. Public DNS and certificate issuance must be checked on your actual server.
+Public account registration is closed by default in production Compose. Existing accounts continue to work. Each account has its own workspace, but configured provider credentials are server-wide. Closing registration controls new account access; it does not impose spending limits on existing accounts. The operational limits below still apply; this configuration alone does not establish production readiness. Public DNS and certificate issuance must be checked on your actual server.
+
+## Control account registration
+
+Production Compose defaults to `PUBLIC_REGISTRATION=false`, including when upgrading an existing configuration that omits this setting. This overrides the local `REGISTRATION_ENABLED=true` default. Guest creation remains disabled independently. The landing page reads the server policy, offers existing-account sign-in, and explains when registration is closed. The API rejects direct registration requests too.
+
+Create a regular account from a trusted, interactive server terminal:
+
+```bash
+docker compose --env-file .env.production -f compose.yaml -f compose.production.yaml exec api python -m app.create_account --email your-account@example.com --name "Your Name"
+```
+
+Do **not** add `-T`: the command requires a terminal and prompts twice for a hidden 10–128 character password. It refuses piped input, command-line passwords, and terminals that cannot hide password entry. The database must already be migrated. Account and private workspace creation is atomic; a duplicate email fails without replacing credentials, sessions, or workspace data. The account is a regular user, with no admin role or automatic email verification. It receives no email and no automatic session. Use your own account credentials or an appropriate secure handoff when provisioning for another person.
+
+For local Compose, use `docker compose exec api python -m app.create_account --email your-account@example.com`. Outside Docker, run `.venv/bin/python -m app.create_account --email your-account@example.com` from `backend/` with the intended database configuration. Never change database connection settings merely to create an account.
+
+To deliberately open production sign-up, set `PUBLIC_REGISTRATION=true` in `.env.production`, then repeat the production `up -d` command to recreate API and worker with the new configuration. `REGISTRATION_ENABLED` controls standalone/local deployments; set it to `false` there to close sign-up. Restart/recreate all API replicas after changes. Preflight flags open registration until public-access quotas are in place; opt-in does not bypass that diagnostic. Closing sign-up preserves current sessions and does not disable login, password recovery, or email verification. Guest creation is a separate `DEMO_AUTH` setting; production Compose always disables it.
 
 ## Check deployment configuration and services
 
@@ -70,7 +86,7 @@ cd backend
 
 Exit **0** means the checks in the reported scope passed; exit **1** means at least one failed (invalid command arguments use exit **2**). With `--offline`, no services are contacted and a successful result applies only to configuration. Fix the reported environment settings in your deployment configuration, then rerun the command. It does not rewrite configuration, migrate databases, change queue registrations, enqueue workflows, or call an AI provider.
 
-Configuration checks cover the exact public HTTPS frontend origin, secure cookies, guest sign-in disabled, PostgreSQL application/checkpoint URLs, Redis, and fields for the selected provider. Service checks use read-only database queries to compare the installed Alembic revision with this release and locate checkpoint tables. Redis is pinged, then its worker registrations are inspected without cleaning or modifying them. A worker must listen on `contentforge`, be idle or busy, have an unexpired registration, and have a heartbeat within 450 seconds. Failed or unconfigured services are reported separately; a passing Redis ping alone does not imply a worker is available.
+Configuration checks cover the exact public HTTPS frontend origin, secure cookies, guest sign-in disabled, public registration closed, PostgreSQL application/checkpoint URLs, Redis, and fields for the selected provider. Service checks use read-only database queries to compare the installed Alembic revision with this release and locate checkpoint tables. Redis is pinged, then its worker registrations are inspected without cleaning or modifying them. A worker must listen on `contentforge`, be idle or busy, have an unexpired registration, and have a heartbeat within 450 seconds. Failed or unconfigured services are reported separately; a passing Redis ping alone does not imply a worker is available.
 
 Connection values, provider keys, worker names, and raw exception details are omitted from both output formats. Provider fields being present does **not** prove credentials are valid or a model can generate content. Public DNS/HTTPS, reverse-proxy behavior, backups, capacity, and an actual end-to-end workflow still need verification. The command reports these limits even when its checks pass. Local demo defaults intentionally fail the public-deployment configuration checks; keep them for local development rather than changing them just to obtain a passing report.
 
@@ -167,7 +183,7 @@ The test database has no network access or published ports; its temporary data d
 - Local mode uses one API process and a thread pool. Do not run multiple SQLite/local-queue replicas.
 - Write and login throttles are process-local. Add trusted edge rate limiting, workload quotas, monitoring, and a shared limit store before an Internet-facing multi-replica deployment.
 - Authentication supports password accounts, SMTP password recovery, email verification, and per-account workspaces. SSO, shared-workspace roles, MFA, and a complete compliance program are not included.
-- Public sign-up and guest creation need operational quotas if enabled. Keep the demo local or disable guest sign-in.
+- Production sign-up is closed by default; provision accounts from the server terminal. Public sign-up and guest creation still need operational quotas if enabled. Closing sign-up does not revoke existing accounts or impose provider spending limits.
 - Rich editor changes persist as plain text. External publishing and autonomous search are not implemented.
 
 ## Cloud environment

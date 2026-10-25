@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     redis_url: str = ""
     frontend_origin: str = "http://localhost:3000"
     demo_auth: bool = True
+    registration_enabled: bool = True
     secure_cookies: bool = False
     smtp_host: str = ""
     smtp_port: int = 587
