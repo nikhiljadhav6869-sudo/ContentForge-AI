@@ -15,7 +15,7 @@ const config: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:recovery(forgot-password|reset-password)",
+        source: "/:recovery(forgot-password|reset-password|verify-email)",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {

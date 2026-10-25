@@ -27,6 +27,7 @@ class User(Entity, Base):
     email: Mapped[str] = mapped_column(String(254), unique=True)
     password_hash: Mapped[str] = mapped_column(Text)
     name: Mapped[str] = mapped_column(String(100))
+    email_verified_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 class Workspace(Entity, Base):
@@ -46,6 +47,15 @@ class SessionToken(Entity, Base):
 class PasswordReset(Base):
     __tablename__ = "password_resets"
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[str] = mapped_column(String(40))
+    requested_at: Mapped[str] = mapped_column(String(40))
+
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    email: Mapped[str] = mapped_column(String(254))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[str] = mapped_column(String(40))
     requested_at: Mapped[str] = mapped_column(String(40))

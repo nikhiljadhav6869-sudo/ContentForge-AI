@@ -76,7 +76,13 @@ Calendar downloads are snapshots, not subscriptions or invitations. After moving
 
 Choose **Sign in → Forgot your password?**, enter your account email, and open the link from your email. Choose and confirm a new password, then sign in again. Links expire after 30 minutes, work once, and are replaced by a newer request. A successful reset signs out existing sessions while preserving your workspace and campaigns.
 
-Email recovery requires the operator's [SMTP configuration](DEPLOYMENT.md#password-recovery-email). If delivery is not configured, the page explains that recovery is unavailable. Request confirmations do not reveal whether an address has an account. Email verification at registration remains a separate, unimplemented feature.
+Email recovery requires the operator's [SMTP configuration](DEPLOYMENT.md#password-recovery-email). If delivery is not configured, the page explains that recovery is unavailable. Request confirmations do not reveal whether an address has an account.
+
+## Verify your account email
+
+Open **Workspace settings → Account email → Send verification link**. Open the email link, sign in to the account that requested it, and click **Verify email**. Settings then shows **Verified**. Links work once, expire after 24 hours, and are replaced by a newer request after a one-minute cooldown.
+
+Verification uses the same SMTP configuration as password recovery. Demo addresses cannot receive email, and unavailable delivery is explained in Settings. Verification is explicitly requested by the account owner; registration does not send mail automatically. Existing accounts remain usable, and this release records email ownership without making verification a requirement for sign-in or content generation.
 
 ## Connect live models
 

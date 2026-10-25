@@ -61,6 +61,11 @@ def deliver(email, token):
         "Only the most recently requested link works.\n"
         "If you did not request this, you can ignore this email. Your password has not changed.\n"
     )
+    send_email(message, email)
+
+
+def send_email(message, email):
+    """Shared verified-TLS transport for account emails."""
     context = ssl.create_default_context()
     if settings.smtp_security == "ssl":
         connection = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=10, context=context)

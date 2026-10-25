@@ -3858,6 +3858,16 @@ small {
 .recovery-card {
   min-width: 0;
 }
+.email-verification-panel {
+  margin-bottom: 24px;
+}
+.email-verification-panel p {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.verification-email {
+  overflow-wrap: anywhere;
+}
 .recovery-card h1 {
   font-size: 23px;
   letter-spacing: -0.8px;

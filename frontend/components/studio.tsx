@@ -35,6 +35,7 @@ import { Button } from "./ui/button";
 import { Loading, ErrorState } from "./shared";
 import Landing from "./landing";
 import PasswordRecovery from "./password-recovery";
+import VerifyEmail from "./email-verification";
 import {
   Dashboard,
   Analytics,
@@ -89,7 +90,9 @@ export default function Studio() {
   const [signingOut, setSigningOut] = useState(false);
   const isLanding = pathname === "/";
   const isRecovery =
-    pathname === "/forgot-password" || pathname === "/reset-password";
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname === "/verify-email";
   const me = useQuery({
     queryKey: ["me"],
     queryFn: () =>
@@ -153,6 +156,7 @@ export default function Studio() {
     setCommand(false);
   };
   if (isLanding) return <Landing />;
+  if (pathname === "/verify-email") return <VerifyEmail />;
   if (isRecovery)
     return (
       <PasswordRecovery key={pathname} reset={pathname === "/reset-password"} />

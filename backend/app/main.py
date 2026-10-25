@@ -49,6 +49,7 @@ from .schemas import (
     Credentials,
     PasswordResetRequest,
     PasswordResetConfirm,
+    EmailVerificationConfirm,
     ProjectInput,
     Brief,
     TextSource,
@@ -63,6 +64,7 @@ from .schemas import (
 )
 from .auth import identity, hash_password, check_password, issue_session
 from . import password_recovery
+from . import email_verification
 from .sources import store_source, fetch_url, DEMO_SOURCES, MAX_BYTES
 from .gateway import availability
 from .events import emit
@@ -245,6 +247,32 @@ def demo_login(response: Response):
         user_id = user.id
     issue_session(response, user_id)
     return {"ok": True}
+
+
+@app.get("/api/auth/email-verification")
+def email_verification_status(who=Depends(identity)):
+    return email_verification.status(who["user_id"])
+
+
+@app.post("/api/auth/email-verification/request", status_code=202)
+def request_email_verification(tasks: BackgroundTasks, who=Depends(identity)):
+    status = email_verification.status(who["user_id"])
+    if status["verified_at"]:
+        return {"message": "Your email is already verified."}
+    if status["demo_address"]:
+        raise HTTPException(400, "Demo addresses cannot receive verification email. Create a personal account.")
+    if not status["delivery_available"]:
+        raise HTTPException(503, "Email verification is unavailable. Contact the site operator.")
+    tasks.add_task(email_verification.request_verification, who["user_id"])
+    return {
+        "message": "Verification requested. Check your inbox and spam folder; wait at least one minute before trying again."
+    }
+
+
+@app.post("/api/auth/email-verification/confirm")
+def confirm_email_verification(body: EmailVerificationConfirm, who=Depends(identity)):
+    email_verification.confirm(who["user_id"], body.token)
+    return {"message": "Your email is verified."}
 
 
 @app.post("/api/auth/logout")

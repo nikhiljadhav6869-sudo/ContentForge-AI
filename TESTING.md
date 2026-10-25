@@ -1,22 +1,23 @@
 # Testing and recorded results
 
-Password recovery, backend tests, Python diagnostics, TypeScript, the production build, database migrations, and browser journeys were validated on 24 October 2026 in the cloud workspace. HTTPS deployment and backup/restore checks were recorded on 23 October; installation, dependency audit, and the earlier standalone workflow smoke checks were recorded on 22 October. These results describe this checkout; GitHub Actions has its own run history.
+Email verification, backend tests, Python diagnostics, TypeScript, the production build, database migrations, and browser journeys were validated on 25 October 2026 in the cloud workspace. The real password-recovery checks were recorded on 24 October, HTTPS deployment and backup/restore on 23 October, and installation, dependency audit, and earlier standalone workflow smoke checks on 22 October. These results describe this checkout; GitHub Actions has its own run history.
 
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 164 passed |
+| Backend, `.venv/bin/pytest -q` | 176 passed |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; four expected public-configuration failures for local demo settings |
 | Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; separate volumes; Caddy validated with network disabled |
 | Isolated HTTPS deployment | Passed with a trusted local CA: web/API routing, HTTP redirect, HSTS, secure login, guest rejection, cross-origin rejection, and rejection of an untrusted certificate |
 | Account-based HTTPS workflow smoke | Passed: PostgreSQL, Redis/RQ, 10 agents, 187 events, 4 artifacts, 9 ZIP members, and SSE event replay |
 | Database backup and isolated restore | Passed: archive checksum verified; all 24 public tables restored with matching row counts and content digests, including application data and checkpoints |
-| Alembic schema drift check | Passed on SQLite and PostgreSQL after migration 0002; LangGraph checkpoint tables retain their separate ownership |
+| Alembic schema drift check | Passed on SQLite and PostgreSQL after migration 0003; LangGraph checkpoint tables retain their separate ownership |
 | Frontend TypeScript check | Passed |
 | Production Next.js build in Docker | Passed |
 | npm dependency audit | 0 vulnerabilities reported at validation time |
-| Playwright against the production web/API containers | 19 passed in one full run: 3 calendar, 3 duplication, 3 workflow, 2 campaign-library, 4 connection/account recovery, and 4 password recovery checks |
+| Playwright against the production web/API containers | 22 passed in one full run: 3 calendar, 3 duplication, 3 email verification, 3 workflow, 2 campaign-library, 4 connection/account recovery, and 4 password recovery checks |
+| Email verification against PostgreSQL | Passed: actual browser confirmation, authentication, session preservation, persisted status, replay rejection, and concurrent confirmation; email captured in process |
 | Password recovery against PostgreSQL | Passed: real browser reset, mobile form, session revocation, new-password login, replay rejection, and simultaneous-reset serialization; email delivery captured in process |
 | PostgreSQL + Redis/RQ end-to-end smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
 | SQLite + local thread pool development smoke | Passed: 10 agents, 187 persisted events, 4 artifacts, 9 ZIP members with verified checksums |
@@ -79,7 +80,7 @@ Calendar rescheduling tests verify timezone normalization, future-date validatio
 
 Calendar download tests inspect MIME type, attachment filename, private/no-store handling, CRLF line endings, UTC timestamps, stable event identifiers after rescheduling, the pinned version reference, demo labels, workspace isolation, and cancelled-reminder rejection. Unicode titles are folded to at most 75 UTF-8 octets per line without splitting characters; escaped title data cannot inject additional events or attendees. Browser coverage downloads real files, checks updated timestamps after a move, verifies retry after an intercepted server error, and inspects the mobile controls. Imports into third-party calendar applications have not been tested; imported files are manual snapshots with no synchronization.
 
-The operator-only preflight change added 38 test cases. No frontend code changed in that release. Its migration test now also rejects the previous schema revision until password-recovery migration 0002 is installed.
+The operator-only preflight change added 38 test cases. No frontend code changed in that release. Its migration test now rejects the previous schema revision until email-verification migration 0003 is installed.
 
 The HTTPS deployment change added 35 backend test cases for accepted/rejected domain names, configuration injection, random independent passwords, owner-only file creation, existing configuration preservation, and symlink protection. Python diagnostics also passed for the new deployment scripts and updated smoke script. No frontend code changed in that release.
 
@@ -96,6 +97,10 @@ The container smoke test uses real PostgreSQL persistence, Redis dispatch, an RQ
 Password recovery adds 21 backend cases covering hashed-token storage, uniform request responses, normalization, persisted request cooldowns, latest-link replacement, expiry, replay, invalid passwords, cross-origin requests, failed-mail redaction and invalidation, single-winner concurrent consumption, revocation of existing sessions, stale-login rejection, preservation of other accounts, missing configuration, recipient/header injection, verified STARTTLS/implicit TLS configuration, and invalid frontend origins. Two migration tests verify that LangGraph's tables are excluded from removal detection while unrelated schema drift still fails.
 
 Four browser cases cover entry from sign-in, unavailable mail configuration, failed availability checks, request retry, matching passwords, reset retry, missing/expired links, URL-fragment removal, refresh behavior, and mobile overflow. These repeatable UI cases intercept mail-related API responses. A separate real browser exercise used an isolated test account in the running PostgreSQL application, captured the delivery callback in process, and completed the actual reset endpoint through the production frontend. It verified that the previous browser session lost access, the old password failed, the new password succeeded, and replay failed. A separate PostgreSQL concurrency check confirmed exactly one reset winner and rejection of session issuance authenticated with the old password.
+
+Email verification adds 12 backend cases for hashed token storage, account/address binding, authentication, unchanged sessions/workspaces, recipient derivation, cooldowns, latest-link replacement, expiry, purpose separation from recovery tokens, failed-mail invalidation and redaction, cross-origin rejection, concurrent single-use consumption, demo/unconfigured delivery behavior, and fragment links through the shared SMTP transport. Migration tests now seed an account at revision 0002 and verify that its credentials survive revision 0003 with no fabricated verification timestamp.
+
+Three browser cases cover settings availability, request retry, explicit confirmation, token removal from the URL, mobile layout, refreshed verified status, signed-out instructions, missing tokens, wrong-account/expired-link feedback, and reload behavior. These repeatable tests intercept verification API responses. A separate real PostgreSQL exercise captured delivery in process, opened the actual confirmation page, rejected anonymous confirmation, verified the account on an explicit button click, retained its session, persisted status after reload, and rejected replay. Another PostgreSQL exercise confirmed that two concurrent confirmations have exactly one winner. A private PostgreSQL backup was taken before the migration.
 
 ## Limits of validation
 

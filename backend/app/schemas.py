@@ -31,6 +31,10 @@ class PasswordResetRequest(BaseModel):
         return value.lower()
 
 
+class EmailVerificationConfirm(BaseModel):
+    token: str = Field(min_length=43, max_length=43, pattern=r"^[A-Za-z0-9_-]+$")
+
+
 class PasswordResetConfirm(BaseModel):
     token: str = Field(min_length=43, max_length=43, pattern=r"^[A-Za-z0-9_-]+$")
     password: str = Field(min_length=10, max_length=128)

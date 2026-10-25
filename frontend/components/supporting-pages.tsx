@@ -1,4 +1,5 @@
 "use client";
+import { EmailVerificationPanel } from "./email-verification";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -859,6 +860,7 @@ export function SettingsPage() {
         title="A workspace that sounds like you."
         description="Shape your brand, configure workflow defaults, and understand your connected models."
       />
+      <EmailVerificationPanel />
       <form onSubmit={save} className="settings-layout">
         <div>
           <section className="panel">
