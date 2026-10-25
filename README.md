@@ -41,6 +41,7 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; text editing, comparisons, anchored comments, revision requests, and Markdown/JSON exports. ZIP packages bundle approved documents, linked evidence, approval records, and file checksums.
 - Dashboard, analytics, editorial calendar, brand preferences, dark/light/system themes, command palette, responsive navigation, authentication, and workspace ownership checks.
 - Live API connection status, outage recovery, and campaign selection scoped to the signed-in workspace.
+- **Workspace usage limits:** persistent daily allowances for starts, retries, and requested revisions, plus a shared active-workflow limit. View usage and the next reset in Settings. Approvals and downloads do not consume the daily allowance.
 - **Controlled registration:** production sign-up is closed by default, with terminal account provisioning and server-driven sign-in options. Existing accounts retain access; see [deployment instructions](DEPLOYMENT.md#control-account-registration).
 - **Campaign library:** title search, status filters, newest/oldest ordering, and server-side pagination across your campaign history. Filters stay in the page URL for reloads and browser navigation.
 - **Duplicate campaigns:** review and edit a saved brief, audience, formats, source selection, and quality settings before launching a separate campaign with fresh drafts and approval.

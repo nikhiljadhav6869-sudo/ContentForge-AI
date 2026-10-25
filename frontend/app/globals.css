@@ -3858,10 +3858,12 @@ small {
 .recovery-card {
   min-width: 0;
 }
-.email-verification-panel {
+.email-verification-panel,
+.workflow-usage-panel {
   margin-bottom: 24px;
 }
-.email-verification-panel p {
+.email-verification-panel p,
+.workflow-usage-panel p {
   margin: 12px 0;
   overflow-wrap: anywhere;
 }

@@ -65,6 +65,7 @@ from .schemas import (
 from .auth import identity, hash_password, check_password, issue_session, create_account
 from . import password_recovery
 from . import email_verification
+from . import usage
 from .sources import store_source, fetch_url, DEMO_SOURCES, MAX_BYTES
 from .gateway import availability
 from .events import emit
@@ -413,16 +414,8 @@ def create_workflow(body: Brief, who=Depends(identity)):
     if not availability().get(body.mode):
         raise HTTPException(400, "Configure this provider on the server or choose demo mode.")
     with Session.begin() as db:
-        # Lock the workspace row to bound simultaneous starts in PostgreSQL.
-        db.execute(update(Workspace).where(Workspace.id == who["workspace_id"]).values(name=Workspace.name))
-        project_ids = select(Project.id).where(Project.workspace_id == who["workspace_id"])
-        active = db.scalar(
-            select(func.count())
-            .select_from(WorkflowRun)
-            .where(WorkflowRun.project_id.in_(project_ids), WorkflowRun.status.in_(["queued", "running"]))
-        )
-        if active >= 2:
-            raise HTTPException(429, "Two workflows are already running in this workspace.")
+        usage.lock_workspace(db, who["workspace_id"])
+        usage.admit(db, who["workspace_id"])
         for source_id in body.source_ids:
             source = db.get(SourceDocument, source_id)
             if not source or source.workspace_id != who["workspace_id"]:
@@ -452,6 +445,12 @@ def create_workflow(body: Brief, who=Depends(identity)):
         emit(run_id, "agent.queued", agent)
     dispatch(run_id)
     return {"id": run_id, "project_id": project.id}
+
+
+@app.get("/api/usage")
+def workspace_usage(who=Depends(identity)):
+    with Session() as db:
+        return usage.snapshot(db, who["workspace_id"])
 
 
 @app.get("/api/workflows")
@@ -627,7 +626,11 @@ def cancel(run_id: str, who=Depends(identity)):
 @app.post("/api/workflows/{run_id}/retry")
 def retry(run_id: str, who=Depends(identity)):
     with Session.begin() as db:
+        usage.lock_workspace(db, who["workspace_id"])
         run = owned_run(db, run_id, who)
+        if run.status not in ("failed", "interrupted") or run.retry_count >= 3:
+            raise HTTPException(409, "Only failed or interrupted runs can resume, up to three attempts.")
+        usage.admit(db, who["workspace_id"])
         changed = db.execute(
             update(WorkflowRun)
             .where(
@@ -646,6 +649,7 @@ def retry(run_id: str, who=Depends(identity)):
 def review(run_id: str, body: ReviewInput, who=Depends(identity)):
     action = None
     with Session.begin() as db:
+        usage.lock_workspace(db, who["workspace_id"])
         run = owned_run(db, run_id, who)
         # Claim the transition before reading versions so simultaneous edits/reviews serialize.
         changed = db.execute(
@@ -662,6 +666,8 @@ def review(run_id: str, body: ReviewInput, who=Depends(identity)):
         ).all()
         if body.decision == "approve" and warnings and not body.acknowledge_warnings:
             raise HTTPException(409, "Acknowledge the remaining evidence warnings before approving.")
+        if body.decision != "reject":
+            usage.admit(db, who["workspace_id"], generation=body.decision == "revise")
         db.add(
             ReviewDecision(
                 run_id=run_id,

@@ -44,6 +44,13 @@ class SessionToken(Entity, Base):
     expires_at: Mapped[str] = mapped_column(String(40))
 
 
+class WorkspaceUsage(Base):
+    __tablename__ = "workspace_usage"
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), primary_key=True)
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    generation_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
 class PasswordReset(Base):
     __tablename__ = "password_resets"
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)

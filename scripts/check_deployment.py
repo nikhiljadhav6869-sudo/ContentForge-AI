@@ -34,6 +34,7 @@ def main() -> int:
         env_file.write_text(
             "DOMAIN=studio.example.com\nPOSTGRES_PASSWORD=synthetic-validation-only\n"
             "OPENAI_API_KEY=synthetic-provider-key\n"
+            "WORKFLOW_DAILY_LIMIT=7\nWORKFLOW_CONCURRENCY_LIMIT=3\n"
             "FRONTEND_ORIGIN=http://unsafe.example.com\nDEMO_AUTH=true\nREGISTRATION_ENABLED=true\nSECURE_COOKIES=false\n"
         )
         command = [
@@ -95,6 +96,11 @@ def main() -> int:
             require(
                 settings["SECURE_COOKIES"] == "true",
                 "Secure cookies were not enforced.",
+            )
+            require(
+                settings["WORKFLOW_DAILY_LIMIT"] == "7"
+                and settings["WORKFLOW_CONCURRENCY_LIMIT"] == "3",
+                "Workspace usage limits were lost during merge.",
             )
             require(
                 settings["OPENAI_API_KEY"] == "synthetic-provider-key",

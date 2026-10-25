@@ -67,7 +67,7 @@ Do **not** add `-T`: the command requires a terminal and prompts twice for a hid
 
 For local Compose, use `docker compose exec api python -m app.create_account --email your-account@example.com`. Outside Docker, run `.venv/bin/python -m app.create_account --email your-account@example.com` from `backend/` with the intended database configuration. Never change database connection settings merely to create an account.
 
-To deliberately open production sign-up, set `PUBLIC_REGISTRATION=true` in `.env.production`, then repeat the production `up -d` command to recreate API and worker with the new configuration. `REGISTRATION_ENABLED` controls standalone/local deployments; set it to `false` there to close sign-up. Restart/recreate all API replicas after changes. Preflight flags open registration until public-access quotas are in place; opt-in does not bypass that diagnostic. Closing sign-up preserves current sessions and does not disable login, password recovery, or email verification. Guest creation is a separate `DEMO_AUTH` setting; production Compose always disables it.
+To deliberately open production sign-up, set `PUBLIC_REGISTRATION=true` in `.env.production`, then repeat the production `up -d` command to recreate API and worker with the new configuration. `REGISTRATION_ENABLED` controls standalone/local deployments; set it to `false` there to close sign-up. Restart/recreate all API replicas after changes. Preflight flags open registration until aggregate spending and public-access abuse controls are in place; opt-in does not bypass that diagnostic. Closing sign-up preserves current sessions and does not disable login, password recovery, or email verification. Guest creation is a separate `DEMO_AUTH` setting; production Compose always disables it.
 
 ## Check deployment configuration and services
 
@@ -110,7 +110,7 @@ Configure these server-only variables in `.env.production` for production Compos
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | Provider's SMTP credentials; both set or both empty for an authenticated relay environment |
 | `SMTP_FROM` | A single sender address authorized by your mail provider |
 
-`FRONTEND_ORIGIN` must be the exact public HTTPS origin for account email links. HTTP is allowed only for loopback development. Links use this configured origin, never the request's Host header. Restart/recreate the API after configuration changes; Compose environment updates require `up -d` with the appropriate env file and overrides. Existing deployments need migrations through `0003`, applied automatically when the rebuilt API starts; local development uses `cd backend && .venv/bin/alembic upgrade head`.
+`FRONTEND_ORIGIN` must be the exact public HTTPS origin for account email links. HTTP is allowed only for loopback development. Links use this configured origin, never the request's Host header. Restart/recreate the API after configuration changes; Compose environment updates require `up -d` with the appropriate env file and overrides. Existing deployments need migrations through `0004`, applied automatically when the rebuilt API starts; local development uses `cd backend && .venv/bin/alembic upgrade head`.
 
 Configure the sender/domain with your mail provider and verify delivery to an account you control before inviting users. SMTP uses certificate/hostname verification, a ten-second socket timeout, and no fallback to plaintext. No provider-specific SMTP credentials are included. The public availability endpoint reports configuration presence, not verified mailbox delivery; deployment preflight does not test SMTP.
 
@@ -174,6 +174,20 @@ docker stop contentforge-restore-check
 
 The test database has no network access or published ports; its temporary data disappears when stopped. Check the saved checksum and inspect the restored records before treating a backup as usable. For actual recovery, restore into a fresh deployment database before starting application services, verify it, and retain the old deployment until recovery is confirmed. Redis queue state is separate: review unfinished workflows and their checkpoints before enabling workers. Never run this restore against a serving application database.
 
+### Workspace workflow allowances
+
+`WORKFLOW_DAILY_LIMIT` defaults to **50 generation attempts per workspace per UTC day**. Each accepted new campaign, retry, or human revision request consumes one attempt across demo and live modes. Automatic agent retries and bounded quality revisions within that attempt do not consume additional attempts. Set the limit to **0** to pause new generation admissions while keeping editing, review, and downloads available. The accepted range is 0–100000.
+
+`WORKFLOW_CONCURRENCY_LIMIT` defaults to **2 queued/running workflows per workspace**, with a range of 1–20. The same admission check applies to new campaigns, retries, requested revisions, and approval/export jobs. Waiting for human review releases the active slot. Approval does not consume the daily generation allowance, but still waits for an active slot. Rejection, editing, viewing, and downloading existing approved content remain available at either limit.
+
+Set both values in `.env.production` for production Compose, the root `.env` for local Compose, or `backend/.env` for standalone development. Recreate/restart all API replicas with matching values. Lowering a limit does not terminate accepted work. Counts exceeding a newly lowered daily limit remain visible with zero remaining allowance. Zero daily allowance pauses generation admissions; it does not interrupt in-flight jobs.
+
+**Settings → Workflow usage** reads persisted counts from the signed-in workspace, refreshes every 30 seconds while visible, and offers manual refresh. The daily reset is midnight UTC, displayed in the browser's local timezone. `GET /api/usage` requires authentication and never accepts a workspace selector. Limit denials return HTTP 429 with an explanatory message and `Retry-After`; form edits remain available for a later attempt.
+
+Migration `0004` adds a per-workspace/day usage table. Back up PostgreSQL before upgrading. Existing accounts, campaigns, approvals, and checkpoints are preserved. Counters begin with admissions after the upgrade; historical runs are not charged retroactively. No scheduled reset task is needed. A workspace row lock serializes admission across PostgreSQL API replicas, and counters commit atomically with workflow transitions. Invalid requests and denied reviews roll back their counter changes. Accepted attempts remain charged after queue failures, workflow failures, or cancellation; retries consume a new attempt. Process restarts do not reset counts. Previous-day rows remain in the database and backups.
+
+These are workflow admission limits, **not token budgets or currency spending caps**. Cancellation may leave a provider call running until it finishes, so the active-workflow count does not bound instantaneous external requests. Multiple accounts, guest accounts, internal agent retries, and automatic revisions can still add aggregate costs. Keep production registration and guest access closed, set provider-side spending controls, and add global abuse controls before admitting untrusted users. Existing queued work and jobs submitted directly by a trusted server operator are outside the API admission check.
+
 ### Service behavior
 
 - Health: `GET /api/health` tests the database and, when configured, Redis. It does not certify a worker is consuming jobs or a model is reachable.
@@ -181,9 +195,9 @@ The test database has no network access or published ports; its temporary data d
 - Back up PostgreSQL, including checkpoint tables, and retain the root configuration separately. Local SQLite requires both the application database and checkpoint database.
 - RQ jobs have a 30-minute limit. Worker failures are recorded as interrupted; the owner can resume from a checkpoint. A provider request already in flight may finish before cancellation is observed.
 - Local mode uses one API process and a thread pool. Do not run multiple SQLite/local-queue replicas.
-- Write and login throttles are process-local. Add trusted edge rate limiting, workload quotas, monitoring, and a shared limit store before an Internet-facing multi-replica deployment.
+- Write and login throttles are process-local. Workspace workflow allowances are database-backed. Add trusted edge rate limiting, global spending controls, monitoring, and a shared store for request throttling before an Internet-facing multi-replica deployment.
 - Authentication supports password accounts, SMTP password recovery, email verification, and per-account workspaces. SSO, shared-workspace roles, MFA, and a complete compliance program are not included.
-- Production sign-up is closed by default; provision accounts from the server terminal. Public sign-up and guest creation still need operational quotas if enabled. Closing sign-up does not revoke existing accounts or impose provider spending limits.
+- Production sign-up is closed by default; provision accounts from the server terminal. Public sign-up and guest creation still need aggregate abuse and spending controls if enabled; new workspaces each receive their own allowance. Closing sign-up does not revoke existing accounts or impose provider spending limits.
 - Rich editor changes persist as plain text. External publishing and autonomous search are not implemented.
 
 ## Cloud environment

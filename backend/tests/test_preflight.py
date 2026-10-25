@@ -115,7 +115,7 @@ def test_probe_errors_are_redacted_and_other_checks_continue(configured, monkeyp
 
 
 @pytest.mark.parametrize(
-    "revisions, expected", [(["0003"], "pass"), (["0002"], "fail"), ([], "fail"), (["old"], "fail")]
+    "revisions, expected", [(["0004"], "pass"), (["0003"], "fail"), ([], "fail"), (["old"], "fail")]
 )
 def test_database_probe_checks_migration_without_writes(configured, monkeypatch, revisions, expected):
     import sqlalchemy

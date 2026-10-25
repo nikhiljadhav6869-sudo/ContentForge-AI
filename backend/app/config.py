@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Literal
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +13,8 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     demo_auth: bool = True
     registration_enabled: bool = True
+    workflow_daily_limit: int = Field(default=50, ge=0, le=100000)
+    workflow_concurrency_limit: int = Field(default=2, ge=1, le=20)
     secure_cookies: bool = False
     smtp_host: str = ""
     smtp_port: int = 587

@@ -25,7 +25,8 @@ def test_migrations_respect_checkpoint_ownership_without_hiding_other_drift(tmp_
     upgraded = subprocess.run(command + ["upgrade", "head"], cwd=root, env=env, capture_output=True, check=False)
     assert upgraded.returncode == 0
     with engine.begin() as db:
-        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0003"
+        assert db.scalar(text("SELECT version_num FROM alembic_version")) == "0004"
+        assert db.scalar(text("SELECT count(*) FROM workspace_usage")) == 0
         assert db.execute(text("SELECT password_hash,email_verified_at FROM users WHERE id='legacy'")).one() == (
             "unchanged",
             None,

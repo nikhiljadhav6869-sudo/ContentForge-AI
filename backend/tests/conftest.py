@@ -12,6 +12,8 @@ os.environ.update(
     CHECKPOINT_URL="",
     DEMO_AUTH="true",
     REGISTRATION_ENABLED="true",
+    WORKFLOW_DAILY_LIMIT="50",
+    WORKFLOW_CONCURRENCY_LIMIT="2",
 )
 from fastapi.testclient import TestClient
 from app.db import Base, engine
