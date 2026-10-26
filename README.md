@@ -20,7 +20,7 @@ Open port **3000** in your local browser. Choose **Explore the live demo** for t
 
 For a public domain, follow [the HTTPS deployment steps](DEPLOYMENT.md#https-on-your-own-server). The separate production configuration adds automatic TLS through Caddy, secure cookies, disabled guest sign-in, internal service ports, and persistent certificate storage. You supply the server, domain, and any live model credentials.
 
-Before upgrading a Compose deployment, use the [database backup and restore-check procedure](DEPLOYMENT.md#database-backups-and-restore-checks). The backup command creates a private PostgreSQL archive and checksum without replacing existing backups.
+Before upgrading a Compose deployment, use the [database backup and restore-check procedure](DEPLOYMENT.md#database-backups-and-restore-checks). The backup command creates a private PostgreSQL archive and checksum without replacing existing backups. `scripts/check_restore.py` can verify that archive by restoring it into a disposable, isolated database and checking its tables and migration.
 
 ## Develop without Docker
 

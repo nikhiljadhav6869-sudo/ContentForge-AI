@@ -5,7 +5,7 @@ Rich-text persistence, Unicode evidence highlighting, provider diagnostics, back
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 276 passed |
+| Backend, `.venv/bin/pytest -q` | 296 passed; the 20 restore-check cases also passed after the real rehearsal exposed and corrected a buffered-descriptor issue |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; five expected public-configuration failures for local demo settings |
 | Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; registration closed by default with explicit opt-in tested; separate volumes; Caddy previously validated with network disabled |
@@ -136,3 +136,11 @@ Three browser cases exercise actual bold/italic/bullet editing, save/reload/reop
 The operator provider diagnostic adds nine cases for provider selection, structured-output validation, token metadata, bounded gateway retry reporting, missing configuration without network access, and redaction of output/configuration/errors. Its real unconfigured OpenAI invocation returned failure with live_generation_verified=false, as expected. No OpenAI/Gemini key or reachable Ollama service was present; SMTP was also unconfigured. Automated provider tests use controlled responses and do not establish live model quality or delivery. Optional global token-cost settings were also verified in the production Compose merge.
 
 The final PostgreSQL/Redis deployment smoke passed with ten agents, 187 persisted events, four artifacts, nine ZIP members with verified checksums, and SSE replay. It used the labeled demo, not a live AI provider. The read-only preflight passed database/migration/checkpoint/Redis/worker checks and retained the five expected configuration failures for local HTTP/demo defaults and the missing model key. See COMPLETION.md for the specification acceptance matrix and external launch dependencies.
+
+## Automated restore rehearsal — 26 October 2026
+
+The restore checker adds 20 cases covering checksum/header validation, private regular files, symlinks, size limits, isolated container arguments, descriptor-based archive input, transactional restore, expected schema revision, missing tables, invalid row counts, bounded readiness, failed creation/start/restore, timeouts, cleanup failures, error redaction, and JSON CLI exit behavior. The full backend run passed 296 tests. The first real restore exposed Python buffering moving the descriptor offset beyond the archive header; an unbuffered temporary snapshot fixed the handoff, and the regression test now reads the descriptor as the child process does. All 20 targeted cases passed after that correction.
+
+A fresh local Compose backup (2,498,980 bytes) was restored with the final checker into a network-isolated PostgreSQL 16 container. It passed migration `0005`, read all 27 public tables, and included 208 workflows, 570 artifact versions, 1,676 checkpoints, and 15,547 workflow events. The checker removed the test container and preserved the archive. This is an archive restore/table-count check, not a record-by-record source comparison or application recovery test. It does not supersede the scope of the older manual digest comparison above. No serving database was restored or stopped, and no public server was changed.
+
+No frontend or application runtime code changed in this release; the previous 31-case browser validation and production build remain applicable. This new command is included in Python diagnostics and its tests run in the existing backend CI suite. Remote CI results require separate verification.

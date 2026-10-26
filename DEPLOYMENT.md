@@ -169,28 +169,23 @@ The archive contains application data, account/password hashes, saved sessions, 
 
 `pg_dump` takes a consistent database snapshot without changing the source or stopping services. For an upgrade or recovery point with no in-flight application work, let workflows finish or reach human review, stop API/worker writes during the snapshot, then restart them. A readable archive catalog is not proof of recovery: the command explicitly returns `restore_verified: false`.
 
-Test a restore into a disposable, isolated database. This example uses RAM for its data directory and is suitable for a small archive:
+Rehearse a **trusted backup** using its previously recorded SHA-256 (from the backup command or scheduled manifest):
 
 ```bash
-docker run -d --rm --name contentforge-restore-check --network none \
-  --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid \
-  -e POSTGRES_USER=contentforge -e POSTGRES_DB=contentforge \
-  -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine
-docker exec contentforge-restore-check pg_isready -U contentforge -d contentforge
+python3 scripts/check_restore.py \
+  --archive .data/backups/before-upgrade.dump \
+  --sha256 '<SHA-256 recorded when this backup was created>'
 ```
 
-Once `pg_isready` reports that it is accepting connections, restore the archive and inspect application/checkpoint data:
+The checker requires a private regular archive owned by the current account; symlinks and group/world-readable files are rejected. It copies the archive to a private temporary snapshot, verifies the supplied checksum and custom-format header, and then creates a uniquely named PostgreSQL 16 container. The image `postgres:16-alpine` must already be available locally (as it normally is after starting Compose); the checker does not pull it. Use only your own trusted archives: PostgreSQL restores can execute SQL supplied by the archive. A checksum detects changes relative to the recorded digest, not who created the backup.
 
-```bash
-docker exec -i contentforge-restore-check pg_restore \
-  --username=contentforge --dbname=contentforge --no-owner --no-acl \
-  --single-transaction --exit-on-error < .data/backups/before-upgrade.dump
-docker exec contentforge-restore-check psql -U contentforge -d contentforge -X \
-  -c 'SELECT count(*) AS campaigns FROM workflow_runs; SELECT count(*) AS checkpoints FROM checkpoints;'
-docker stop contentforge-restore-check
-```
+The test container has no network access, published ports, host mounts, or access to the serving database. It uses a temporary RAM-backed data directory, a 1 GiB memory limit, one CPU, and a process limit. The command is intended for small backups: it accepts archives up to 512 MiB, and expanded data must fit the 768 MiB test data directory. Larger backups require a separately provisioned isolated rehearsal environment. The private temporary archive copy also needs local disk space.
 
-The test database has no network access or published ports; its temporary data disappears when stopped. Check the saved checksum and inspect the restored records before treating a backup as usable. For actual recovery, restore into a fresh deployment database before starting application services, verify it, and retain the old deployment until recovery is confirmed. Redis queue state is separate: review unfinished workflows and their checkpoints before enabling workers. Never run this restore against a serving application database.
+It waits for PostgreSQL initialization, restores in one transaction with exit-on-error, reads counts from every public table, checks required application/checkpoint tables, and verifies migration `0005` by default. For a deliberately older backup, supply its expected migration, for example `--expected-revision 0004`. It does not migrate or rewrite the archive. A successful JSON report includes the checksum, migration, table/row counts, `restore_verified: true`, and `test_container_removed: true`. Exit **0** means the rehearsal and cleanup passed; **1** means failure with redacted details; invalid CLI usage exits **2**. No source records, credentials, or raw SQL errors are printed.
+
+Cleanup targets only the new container's ID, including after restore failures. A cleanup failure reports that ID and exits unsuccessfully. An abruptly killed process or a Docker creation timeout may leave a `contentforge-restore-<random-id>` container; inspect and remove that specific rehearsal container. Neither archives nor existing containers are deleted. The checker does not alter scheduled manifests or mark future archives verified.
+
+This proves that the particular archive can be restored and inspected; it does not compare every record with the source or test application startup, login, or resumed workflows. Keep those checks in a full recovery rehearsal. For actual recovery, restore into a fresh deployment database before starting application services, verify it, and retain the old deployment until recovery is confirmed. Redis queue state is separate: review unfinished workflows and checkpoints before enabling workers. Configuration, secrets, and TLS state need their separate recovery procedure. Never run a recovery restore against a serving application database.
 
 ### Daily backup schedule and freshness checks
 

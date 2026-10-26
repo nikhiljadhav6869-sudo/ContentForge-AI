@@ -23,7 +23,7 @@ This checklist maps the repository to the 18 acceptance criteria in [the origina
 | 15 | Exportable artifacts | Markdown, JSON, and deterministic ZIP packages with approval/evidence references and checksums; supported rich-text formatting is retained. |
 | 16 | Working no-key demonstration | Complete EV campaign executes through the graph, disputed claim, revision, review, approval, and download; demo provenance is labeled. |
 | 17 | Automated tests | Backend/security/workflow tests, browser journeys, operator-tool tests, production build and CI definitions; see [recorded results](TESTING.md). |
-| 18 | Deployment configuration | Frozen installation, Compose/PostgreSQL/Redis, standalone frontend, HTTPS proxy configuration, preflight, backups, and generated systemd schedules with server installation instructions. |
+| 18 | Deployment configuration | Frozen installation, Compose/PostgreSQL/Redis, standalone frontend, HTTPS proxy configuration, preflight, backups, isolated restore rehearsals, and generated systemd schedules with server installation instructions. |
 
 ## Reproduce the project
 
@@ -47,7 +47,7 @@ The following cannot be established by generating more repository files:
 1. **Hosting and domain:** choose the deployment machine/service and domain, configure DNS, then run the [HTTPS deployment procedure](DEPLOYMENT.md#https-on-your-own-server). Validate public TLS, login, SSE, and an end-to-end campaign from outside that server. No external hosting or domain has been provisioned here.
 2. **Live AI:** configure OpenAI-compatible/Gemini credentials or a reachable Ollama installation in private server environment settings. Run `python -m app.provider_check --provider ...` inside the backend, then review a full live campaign with supplied sources. The completion check found no configured OpenAI/Gemini keys and no reachable Ollama models; no live-model success is claimed.
 3. **Email:** configure SMTP and verify real delivery of recovery and verification links for a controlled account. Delivery is currently unconfigured; tests capture email in process rather than sending it externally.
-4. **Operations:** install/enable the generated backup timer on the actual server, confirm it runs after reboot, test restore, arrange encrypted off-server copies/retention, and connect failure monitoring. The workspace has no running systemd manager; generated timers are not active.
+4. **Operations:** install/enable the generated backup timer on the actual server, confirm it runs after reboot, run the isolated restore checker and a full application recovery rehearsal, arrange encrypted off-server copies/retention, and connect failure monitoring. The workspace has no running systemd manager; generated timers are not active.
 5. **Public access:** keep registration/guests closed until operator access, provider spending limits, global abuse controls, and monitoring are ready. Existing per-workspace admission limits count attempts, not currency costs.
 
 Do not paste provider keys, SMTP passwords, or server credentials into issues, commits, or public documentation. They belong in the deployment's private environment/secret configuration.
