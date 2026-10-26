@@ -6,9 +6,7 @@ import logging
 import secrets
 import subprocess
 import sys
-import threading
 import time
-from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +14,7 @@ from typing import Literal
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 from pypdf import PdfReader
 from sqlalchemy import select, update, func, text
 from sqlalchemy.exc import IntegrityError
@@ -66,6 +65,7 @@ from .auth import identity, hash_password, check_password, issue_session, create
 from . import password_recovery
 from . import email_verification
 from . import usage
+from . import rate_limit
 from .sources import store_source, fetch_url, DEMO_SOURCES, MAX_BYTES
 from .gateway import availability
 from .events import emit
@@ -97,8 +97,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Last-Event-ID"],
 )
 app.add_middleware(BodyLimitMiddleware)
-rate_buckets = defaultdict(deque)
-rate_lock = threading.Lock()
 
 
 @app.middleware("http")
@@ -114,23 +112,20 @@ async def guard(request: Request, call_next):
         if length > MAX_BYTES + 20000:
             return Response(status_code=413)
         address = request.client.host if request.client else "unknown"
-        key = (address, "auth" if "/auth/" in request.url.path else "write")
-        current = time.monotonic()
-        with rate_lock:
-            if len(rate_buckets) > 10000:
-                for old in list(rate_buckets):
-                    if not rate_buckets[old] or rate_buckets[old][-1] < current - 60:
-                        del rate_buckets[old]
-            bucket = rate_buckets[key]
-            while bucket and bucket[0] < current - 60:
-                bucket.popleft()
-            if len(bucket) >= (30 if key[1] == "auth" else 120):
-                return Response(
-                    json.dumps({"detail": "Too many requests. Try again in one minute."}),
-                    429,
-                    media_type="application/json",
-                )
-            bucket.append(current)
+        scope = "auth" if "/auth/" in request.url.path else "write"
+        try:
+            retry_after = await run_in_threadpool(rate_limit.check, address, scope)
+        except rate_limit.LimiterUnavailable:
+            return Response(
+                json.dumps({"detail": "Request protection is temporarily unavailable. Please retry shortly."}),
+                503, media_type="application/json", headers={"Retry-After": "5", "Cache-Control": "no-store"},
+            )
+        if retry_after:
+            return Response(
+                json.dumps({"detail": "Too many requests. Try again shortly."}),
+                429, media_type="application/json",
+                headers={"Retry-After": str(retry_after), "Cache-Control": "no-store"},
+            )
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     if not response.headers.get("content-type", "").startswith("text/event-stream"):

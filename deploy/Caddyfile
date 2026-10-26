@@ -4,6 +4,8 @@
 	@api path /api /api/*
 	handle @api {
 		reverse_proxy api:8000 {
+			# Replace browser-supplied chains; the API trusts this private proxy hop.
+			header_up X-Forwarded-For {remote_host}
 			# Deliver persisted SSE events immediately, without response buffering.
 			flush_interval -1
 		}

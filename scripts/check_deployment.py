@@ -99,6 +99,10 @@ def main() -> int:
                 "Secure cookies were not enforced.",
             )
             require(
+                settings["FORWARDED_ALLOW_IPS"] == "*",
+                "Private production services must accept the proxy's sanitized client address.",
+            )
+            require(
                 settings["WORKFLOW_DAILY_LIMIT"] == "7"
                 and settings["WORKFLOW_CONCURRENCY_LIMIT"] == "3",
                 "Workspace usage limits were lost during merge.",

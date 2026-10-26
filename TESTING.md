@@ -1,11 +1,13 @@
 # Testing and recorded results
 
+Shared Redis request throttling, production proxy forwarding, and the updated API/worker images were validated on 27 October 2026 (India time).
+
 Rich-text persistence, Unicode evidence highlighting, provider diagnostics, backend tests, TypeScript, the production build, and application browser journeys were validated on 26 October 2026 (India time). Backup scheduling and systemd-unit checks were validated earlier on 26 October; workspace usage limits and their earlier release checks were recorded on 25 October. The real password-recovery checks were recorded on 24 October, HTTPS deployment and backup/restore on 23 October, and installation, dependency audit, and earlier standalone workflow smoke checks on 22 October. These results describe this checkout; GitHub Actions has its own run history.
 
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 296 passed; the 20 restore-check cases also passed after the real rehearsal exposed and corrected a buffered-descriptor issue |
+| Backend, `.venv/bin/pytest -q` | 312 passed with the dedicated Redis integration URL configured |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; five expected public-configuration failures for local demo settings |
 | Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; registration closed by default with explicit opt-in tested; separate volumes; Caddy previously validated with network disabled |
@@ -144,3 +146,22 @@ The restore checker adds 20 cases covering checksum/header validation, private r
 A fresh local Compose backup (2,498,980 bytes) was restored with the final checker into a network-isolated PostgreSQL 16 container. It passed migration `0005`, read all 27 public tables, and included 208 workflows, 570 artifact versions, 1,676 checkpoints, and 15,547 workflow events. The checker removed the test container and preserved the archive. This is an archive restore/table-count check, not a record-by-record source comparison or application recovery test. It does not supersede the scope of the older manual digest comparison above. No serving database was restored or stopped, and no public server was changed.
 
 No frontend or application runtime code changed in this release; the previous 31-case browser validation and production build remain applicable. This new command is included in Python diagnostics and its tests run in the existing backend CI suite. Remote CI results require separate verification.
+
+## Shared Redis request throttling — 27 October 2026
+
+Sixteen new cases cover sliding-window boundaries, simultaneous local admission, bounded fallback storage, equivalent IP representations, independent request categories, Redis arguments and result validation, redacted failures without local fallback, HTTP 429/503 retry headers, reads during limiter outages, and rejection of untrusted forwarding-header changes. Two cases exercise real Redis: window expiration/TTL and four separate Python processes contending for one allowance. Exactly 30 of 48 authentication attempts were admitted; a newly started process could not reset the bucket.
+
+To include these integration cases locally, point the test-only variable at an available test Redis database:
+
+```bash
+cd backend
+CONTENTFORGE_TEST_REDIS_URL=redis://127.0.0.1:6379/15 .venv/bin/pytest -q
+```
+
+These tests use unique keys and delete only their own keys; they never flush a Redis database. Without the variable, the two real-Redis cases are skipped. CI now supplies a disposable Redis service and this variable. The final local full run passed all 312 cases; Python diagnostics, production Compose validation, Caddy configuration validation, and updated API/worker image builds passed. Remote CI status is not inferred from local results.
+
+A separate temporary Docker stack exercised the actual Caddy configuration and API over HTTPS with an explicitly trusted local CA. It sent 35 authentication writes with changing spoofed X-Forwarded-For, X-Real-IP, and Forwarded headers. Thirty reached the handler and five returned HTTP 429, proving the browser-supplied values did not split the bucket on this path. Other writes used their separate allowance. Stopping that disposable Redis produced HTTP 503 with Retry-After for writes while an ordinary read still reached its handler. All temporary containers and their network were removed; the normal stack's Redis and data were preserved. The first test harness used an internal Docker network that did not expose its requested loopback test port; the harness was adjusted to a separate bridge network before the successful verified-TLS check.
+
+The updated PostgreSQL/Redis stack passed the full demo smoke: ten agents, 187 persisted events, four artifacts, nine ZIP members, and SSE replay. It used labeled demo outputs and made no live provider or email requests. Public DNS/ACME, deployment capacity, and an external proxy/CDN chain remain separate operator checks.
+
+All three browser journey cases passed against the updated production-built API and worker (two minutes): complete campaign editing/approval/export/calendar, guided creation and responsive layouts, and SSE replay. No frontend code changed; the preceding 31-case full/targeted UI validation remains recorded above.

@@ -13,6 +13,8 @@ services:
       DEMO_AUTH: "false"
       REGISTRATION_ENABLED: ${PUBLIC_REGISTRATION:-false}
       SECURE_COOKIES: "true"
+      # API has no public port; only trusted stack services can connect directly.
+      FORWARDED_ALLOW_IPS: "*"
   worker:
     environment: *production-env
   web:

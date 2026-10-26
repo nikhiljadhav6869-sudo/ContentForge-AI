@@ -7,7 +7,7 @@ This checklist maps the repository to the 18 acceptance criteria in [the origina
 | # | Acceptance criterion | Implementation and verification |
 | --- | --- | --- |
 | 1 | Connected premium frontend | Landing, dashboard, creation, control center, evidence, content, approvals, analytics, calendar, and settings; browser journeys cover navigation and phone/tablet/desktop layouts. |
-| 2 | Working FastAPI backend | Authenticated APIs, validated inputs, workspace ownership, read/write flows, health checks, and automated backend tests. |
+| 2 | Working FastAPI backend | Authenticated APIs, validated inputs, workspace ownership, read/write flows, shared Redis request throttles, health checks, and automated backend tests. |
 | 3 | Database persistence | PostgreSQL deployment and SQLite development; Alembic migrations through `0005`; versions, evidence, events, approvals, reminders, and usage persist. |
 | 4 | Real LangGraph orchestration | Typed graph state, parallel research/strategy, conditional revisions, checkpointed human review, bounded termination, and Redis/RQ dispatch. |
 | 5 | Interactive agent visualization | XYFlow graph supports selection, zoom/pan, inspector details, and visible workflow states. |
@@ -48,7 +48,7 @@ The following cannot be established by generating more repository files:
 2. **Live AI:** configure OpenAI-compatible/Gemini credentials or a reachable Ollama installation in private server environment settings. Run `python -m app.provider_check --provider ...` inside the backend, then review a full live campaign with supplied sources. The completion check found no configured OpenAI/Gemini keys and no reachable Ollama models; no live-model success is claimed.
 3. **Email:** configure SMTP and verify real delivery of recovery and verification links for a controlled account. Delivery is currently unconfigured; tests capture email in process rather than sending it externally.
 4. **Operations:** install/enable the generated backup timer on the actual server, confirm it runs after reboot, run the isolated restore checker and a full application recovery rehearsal, arrange encrypted off-server copies/retention, and connect failure monitoring. The workspace has no running systemd manager; generated timers are not active.
-5. **Public access:** keep registration/guests closed until operator access, provider spending limits, global abuse controls, and monitoring are ready. Existing per-workspace admission limits count attempts, not currency costs.
+5. **Public access:** keep registration/guests closed until operator access, provider spending limits, global abuse controls, and monitoring are ready. Shared Redis request throttles and per-workspace admission limits are implemented; these limits count requests/attempts, not currency costs, and do not replace edge abuse protection.
 
 Do not paste provider keys, SMTP passwords, or server credentials into issues, commits, or public documentation. They belong in the deployment's private environment/secret configuration.
 

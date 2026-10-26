@@ -17,7 +17,8 @@ os.environ.update(
 )
 from fastapi.testclient import TestClient
 from app.db import Base, engine
-from app.main import app, rate_buckets
+from app.main import app
+from app.rate_limit import local_limiter
 from app.workflow import execute
 import app.main as main
 
@@ -26,7 +27,7 @@ import app.main as main
 def client(monkeypatch):
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    rate_buckets.clear()
+    local_limiter.clear()
     monkeypatch.setattr(main, "enqueue", lambda run_id, action="start": execute(run_id, action))
     with TestClient(app) as client:
         assert client.post("/api/auth/demo").status_code == 200
