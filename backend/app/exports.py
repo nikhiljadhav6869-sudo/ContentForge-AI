@@ -5,6 +5,7 @@ import io
 import json
 import re
 import zipfile
+from .rich_text import document_markdown
 
 DEMO_NOTICE = "DEMO: generated from labeled sample fixtures. Not live AI research."
 EVIDENCE_NOTICE = "Human approval is an editorial decision, not a factual guarantee."
@@ -17,7 +18,8 @@ def json_document(value):
 def artifact_markdown(artifact, mode):
     version = artifact["version"]
     disclaimer = DEMO_NOTICE + "\n\n" if mode == "demo" else ""
-    return disclaimer + f"# {artifact['platform'].upper()} · v{version['number']}\n\n{version['body']}"
+    content = document_markdown(version["document"]) if version.get("document") else version["body"]
+    return disclaimer + f"# {artifact['platform'].upper()} · v{version['number']}\n\n{content}"
 
 
 def campaign_markdown(payload):

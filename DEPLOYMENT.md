@@ -90,6 +90,24 @@ Configuration checks cover the exact public HTTPS frontend origin, secure cookie
 
 Connection values, provider keys, worker names, and raw exception details are omitted from both output formats. Provider fields being present does **not** prove credentials are valid or a model can generate content. Public DNS/HTTPS, reverse-proxy behavior, backups, capacity, and an actual end-to-end workflow still need verification. The command reports these limits even when its checks pass. Local demo defaults intentionally fail the public-deployment configuration checks; keep them for local development rather than changing them just to obtain a passing report.
 
+## Verify a live model connection
+
+Run the operator-only diagnostic from the same API container that hosts the app:
+
+```bash
+docker compose exec -T api python -m app.provider_check --provider openai
+```
+
+Choose `gemini` or `ollama` when appropriate. For production Compose, include `--env-file .env.production -f compose.yaml -f compose.production.yaml` before `exec`. For standalone development, run `.venv/bin/python -m app.provider_check --provider openai` from `backend/`.
+
+This command **sends a real generation request and may incur charges**, using the normal gateway, configured model, bounded retries, and TLS verification. It supplies only a fixed synthetic planning task; no account data, source uploads, or campaign contents are sent. Missing credentials fail without a provider request. Exit 0 means one structured response passed validation; exit 1 means configuration, transport, provider, or output validation failed. JSON output includes the selected provider, elapsed time, retry count, and token counts when reported, but not keys, endpoints, raw response text, or exception details. It creates no workflows or accounts and sends no email. This trusted operator command is outside per-workspace workflow allowances.
+
+A passing probe does not prove full multi-agent generation or factual accuracy. Sign in, add suitable reference text, select that provider in a new campaign, and review its actual drafts and evidence before approving. Live content is never auto-approved by this check. The no-key deployment smoke command continues to use the labeled demo.
+
+Optional `INPUT_COST_PER_MILLION` and `OUTPUT_COST_PER_MILLION` configure global USD token-rate estimates for API and worker processes. Both default to zero, leaving estimated cost unavailable; an input rate greater than zero enables estimation when the provider reports token counts. Use nonnegative rates appropriate to the model being measured. These rates apply globally, so do not treat estimates as model-specific billing when multiple providers with different prices are in use. They do not enforce a spending cap. Use provider-side billing controls for actual budget enforcement.
+
+Migration `0005` adds the nullable structured-document field to artifact versions. Back up PostgreSQL before upgrading; the API applies migrations on startup. Older version bodies, evidence offsets, approvals, and reminders remain intact. Human edits can now preserve bold, italic, and bullet lists while producing a new canonical plain-text body for evidence matching. Unsupported nodes/attributes and mismatched text/document pairs are rejected.
+
 ## Hosted frontend
 
 The `frontend/` directory is compatible with a Next.js host such as Vercel. Set the root directory to `frontend`, install with `npm ci`, build with `npm run build`, and configure server-only `BACKEND_URL` **before the build**. It is used in the API rewrite. Do not put provider keys in `NEXT_PUBLIC_*` variables.
@@ -110,7 +128,7 @@ Configure these server-only variables in `.env.production` for production Compos
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | Provider's SMTP credentials; both set or both empty for an authenticated relay environment |
 | `SMTP_FROM` | A single sender address authorized by your mail provider |
 
-`FRONTEND_ORIGIN` must be the exact public HTTPS origin for account email links. HTTP is allowed only for loopback development. Links use this configured origin, never the request's Host header. Restart/recreate the API after configuration changes; Compose environment updates require `up -d` with the appropriate env file and overrides. Existing deployments need migrations through `0004`, applied automatically when the rebuilt API starts; local development uses `cd backend && .venv/bin/alembic upgrade head`.
+`FRONTEND_ORIGIN` must be the exact public HTTPS origin for account email links. HTTP is allowed only for loopback development. Links use this configured origin, never the request's Host header. Restart/recreate the API after configuration changes; Compose environment updates require `up -d` with the appropriate env file and overrides. Existing deployments need migrations through `0005`, applied automatically when the rebuilt API starts; local development uses `cd backend && .venv/bin/alembic upgrade head`.
 
 Configure the sender/domain with your mail provider and verify delivery to an account you control before inviting users. SMTP uses certificate/hostname verification, a ten-second socket timeout, and no fallback to plaintext. No provider-specific SMTP credentials are included. The public availability endpoint reports configuration presence, not verified mailbox delivery; deployment preflight does not test SMTP.
 
@@ -251,7 +269,7 @@ These are workflow admission limits, **not token budgets or currency spending ca
 - Write and login throttles are process-local. Workspace workflow allowances are database-backed. Add trusted edge rate limiting, global spending controls, monitoring, and a shared store for request throttling before an Internet-facing multi-replica deployment.
 - Authentication supports password accounts, SMTP password recovery, email verification, and per-account workspaces. SSO, shared-workspace roles, MFA, and a complete compliance program are not included.
 - Production sign-up is closed by default; provision accounts from the server terminal. Public sign-up and guest creation still need aggregate abuse and spending controls if enabled; new workspaces each receive their own allowance. Closing sign-up does not revoke existing accounts or impose provider spending limits.
-- Rich editor changes persist as plain text. External publishing and autonomous search are not implemented.
+- Rich editor changes persist as validated paragraph/list documents alongside canonical evidence text. External publishing and autonomous search are not implemented.
 
 ## Cloud environment
 

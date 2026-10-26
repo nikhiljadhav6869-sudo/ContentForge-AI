@@ -1,3 +1,5 @@
+import type { RichDocument } from "./rich-text";
+
 export type Status =
   | "queued"
   | "running"
@@ -37,6 +39,7 @@ export type Version = {
   artifact_id: string;
   number: number;
   body: string;
+  document?: RichDocument | null;
   reason: string;
   execution_id: string | null;
   created_at: string;

@@ -727,6 +727,7 @@ def edit_artifact(artifact_id: str, body: EditInput, who=Depends(identity)):
         if current.number != body.base_version:
             raise HTTPException(409, "This document changed in another tab. Reload before saving.")
         version = new_version(db, artifact, body.body, "Human edit; evidence reset")
+        version.document = body.document
         verify_version(db, version, [], edited=True)
         data = serialize(version)
     emit(

@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Platform = Literal["blog", "linkedin", "instagram", "youtube"]
 
@@ -77,6 +77,17 @@ class ReviewInput(BaseModel):
 class EditInput(BaseModel):
     body: str = Field(min_length=10, max_length=40000)
     base_version: int = Field(ge=1)
+    document: dict | None = None
+
+    @model_validator(mode="after")
+    def coherent_document(self):
+        if self.document is not None:
+            from .rich_text import validate_document, document_text
+
+            self.document = validate_document(self.document)
+            if document_text(self.document) != self.body:
+                raise ValueError("Document text must match the version body.")
+        return self
 
 
 class CommentInput(BaseModel):

@@ -35,6 +35,7 @@ def main() -> int:
             "DOMAIN=studio.example.com\nPOSTGRES_PASSWORD=synthetic-validation-only\n"
             "OPENAI_API_KEY=synthetic-provider-key\n"
             "WORKFLOW_DAILY_LIMIT=7\nWORKFLOW_CONCURRENCY_LIMIT=3\n"
+            "INPUT_COST_PER_MILLION=0.5\nOUTPUT_COST_PER_MILLION=1.5\n"
             "FRONTEND_ORIGIN=http://unsafe.example.com\nDEMO_AUTH=true\nREGISTRATION_ENABLED=true\nSECURE_COOKIES=false\n"
         )
         command = [
@@ -101,6 +102,11 @@ def main() -> int:
                 settings["WORKFLOW_DAILY_LIMIT"] == "7"
                 and settings["WORKFLOW_CONCURRENCY_LIMIT"] == "3",
                 "Workspace usage limits were lost during merge.",
+            )
+            require(
+                settings["INPUT_COST_PER_MILLION"] == "0.5"
+                and settings["OUTPUT_COST_PER_MILLION"] == "1.5",
+                "Provider cost estimate settings were lost during merge.",
             )
             require(
                 settings["OPENAI_API_KEY"] == "synthetic-provider-key",

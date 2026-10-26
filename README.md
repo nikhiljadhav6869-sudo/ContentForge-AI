@@ -38,7 +38,7 @@ This starts the frontend on port 3000 and backend on port 8000, using SQLite and
 - **Agent Control Center:** interactive XYFlow graph, actual backend events, stage inputs/outputs, decision summaries, usage metrics, retry and cancellation controls, persistent event sequence replay.
 - **Evidence Intelligence Studio:** source library, highlighted claims, supporting and contradictory passages, many-to-many claim/source links, human evidence assessment, and immutable version history.
 - **Ten specialist roles:** supervisor, research, strategy, writer, fact checker, editor, brand guardian, SEO, quality, and export. Research and strategy run in parallel. Quality feedback is bounded. Export is gated by a durable human-approval interrupt.
-- **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; text editing, comparisons, anchored comments, revision requests, and Markdown/JSON exports. ZIP packages bundle approved documents, linked evidence, approval records, and file checksums.
+- **Content Studio:** blog, LinkedIn, Instagram, and YouTube drafts; versioned rich-text editing (bold, italic, and bullet lists), comparisons, anchored comments, revision requests, and Markdown/JSON exports. ZIP packages bundle approved documents, linked evidence, approval records, and file checksums.
 - Dashboard, analytics, editorial calendar, brand preferences, dark/light/system themes, command palette, responsive navigation, authentication, and workspace ownership checks.
 - Live API connection status, outage recovery, and campaign selection scoped to the signed-in workspace.
 - **Workspace usage limits:** persistent daily allowances for starts, retries, and requested revisions, plus a shared active-workflow limit. View usage and the next reset in Settings. Approvals and downloads do not consume the daily allowance.
@@ -87,6 +87,12 @@ Open **Workspace settings → Account email → Send verification link**. Open t
 
 Verification uses the same SMTP configuration as password recovery. Demo addresses cannot receive email, and unavailable delivery is explained in Settings. Verification is explicitly requested by the account owner; registration does not send mail automatically. Existing accounts remain usable, and this release records email ownership without making verification a requirement for sign-in or content generation.
 
+## Edit and preserve formatting
+
+In **Content Studio**, open a campaign awaiting approval and choose **Edit document**. Bold, italic, bullet lists, nested lists, and line breaks persist when you save a new version. Reloading, reopening the editor, and comparing versions retain that formatting. Markdown and ZIP exports render the supported formatting; JSON includes both the structured document and the exact plain text used for evidence offsets.
+
+Every saved version requires a fresh evidence review, including formatting-only edits. Existing versions remain unchanged. The editor rejects a save if another tab has already created a newer version, preserving your unsaved text so you can copy it before reloading. Older generated documents and API clients that submit plain text remain supported. AI revision rounds produce new generated drafts and do not inherit human formatting automatically.
+
 ## Connect live models
 
 For local development, copy `backend/.env.example` to `backend/.env`. For Compose, edit the root `.env`. Set the provider variables on the server, then restart the API and worker:
@@ -97,7 +103,7 @@ For local development, copy `backend/.env.example` to `backend/.env`. For Compos
 | Google Gemini | `GEMINI_API_KEY`, optional `GEMINI_MODEL` |
 | Ollama | Running Ollama server, installed model, `OLLAMA_BASE_URL`, `OLLAMA_MODEL` |
 
-Keys are never returned to the frontend. Availability badges indicate configuration presence; a live workflow establishes actual connectivity. Live-provider calls may incur charges. Demo mode needs no provider.
+Keys are never returned to the frontend. Availability badges indicate configuration presence; a live workflow establishes actual connectivity. Live-provider calls may incur charges. Demo mode needs no provider. Test configured model access with `docker compose exec -T api python -m app.provider_check --provider openai` (or `gemini` / `ollama`). This sends one real structured generation request, may incur charges, and reports no credentials or generated text; it does not certify a full campaign.
 
 Live research reads user-provided text/PDFs and securely retrieved, allowlisted URLs. It does **not** perform autonomous web search. Configure trusted source hosts with `SOURCE_HOSTS`. The URL retriever pins public DNS addresses and validates TLS and redirects.
 
@@ -125,12 +131,13 @@ See [TESTING.md](TESTING.md) for exact coverage and recorded outcomes. See [DEMO
 - [Downloadable campaign packages](EXPORTS.md)
 - [Deployment and operations](DEPLOYMENT.md)
 - [Tests and validation](TESTING.md)
+- [Specification acceptance and launch status](COMPLETION.md)
 - [College demonstration](DEMO.md)
 - [Viva preparation](VIVA_GUIDE.md)
 
 ## Practical limits
 
-This is a working production-oriented reference project, not a claim of audited production readiness. Claim extraction and the quality rubric are deliberately transparent heuristics. Live generation must be reviewed. Export and editorial scheduling work; external social publishing is not connected. Rich-text editing controls save plain text, so formatting marks are not retained. The built-in guest demo is intended for local presentations; disable it for public deployments. See deployment notes for scaling, recovery, and security boundaries.
+This is a working production-oriented reference project, not a claim of audited production readiness. Claim extraction and the quality rubric are deliberately transparent heuristics. Live generation must be reviewed. Export and editorial scheduling work; external social publishing is not connected. The editor preserves supported formatting; arbitrary HTML, links, images, and custom styles are not accepted. The built-in guest demo is intended for local presentations; disable it for public deployments. See deployment notes for scaling, recovery, and security boundaries.
 
 ## Check deployment readiness
 

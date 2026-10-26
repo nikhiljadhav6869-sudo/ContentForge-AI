@@ -157,6 +157,7 @@ class ArtifactVersion(Entity, Base):
     execution_id: Mapped[str | None] = mapped_column(ForeignKey("agent_executions.id"), nullable=True)
     number: Mapped[int] = mapped_column(Integer)
     body: Mapped[str] = mapped_column(Text)
+    document: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     reason: Mapped[str] = mapped_column(Text)
 
 

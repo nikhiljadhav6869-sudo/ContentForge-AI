@@ -49,15 +49,16 @@ export function HighlightedDocument({
   onSelect: (id: string) => void;
 }) {
   const ordered = [...claims].sort((a, b) => a.start - b.start);
+  // Persisted offsets count Unicode code points (Python), not UTF-16 units.
+  const points = Array.from(body);
+  const slice = (start: number, end?: number) =>
+    points.slice(start, end).join("");
   const pieces: React.ReactNode[] = [];
   let cursor = 0;
   for (const claim of ordered) {
-    if (
-      claim.start < cursor ||
-      body.slice(claim.start, claim.end) !== claim.text
-    )
+    if (claim.start < cursor || slice(claim.start, claim.end) !== claim.text)
       continue;
-    pieces.push(body.slice(cursor, claim.start));
+    pieces.push(slice(cursor, claim.start));
     pieces.push(
       <button
         key={claim.id}
@@ -72,7 +73,7 @@ export function HighlightedDocument({
     );
     cursor = claim.end;
   }
-  pieces.push(body.slice(cursor));
+  pieces.push(slice(cursor));
   return <div className="document-body">{pieces}</div>;
 }
 export default function EvidenceStudio({ id }: { id: string | null }) {

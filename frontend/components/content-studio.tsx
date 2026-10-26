@@ -5,6 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
+  plainDocument,
+  documentText,
+  RichDocumentView,
+  type RichDocument,
+} from "@/lib/rich-text";
+import {
   ArrowLeftRight,
   Bold,
   Check,
@@ -156,20 +162,25 @@ function RichEditor({
   onChange,
 }: {
   version: Version;
-  onChange: (text: string) => void;
+  onChange: (document: RichDocument) => void;
 }) {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit.configure({
+        blockquote: false,
+        code: false,
+        codeBlock: false,
+        heading: false,
+        horizontalRule: false,
+        orderedList: false,
+        strike: false,
+        link: false,
+        underline: false,
+      }),
+    ],
     immediatelyRender: false,
-    content: {
-      type: "doc",
-      content: version.body.split("\n\n").map((text) => ({
-        type: "paragraph",
-        content: text ? [{ type: "text", text }] : [],
-      })),
-    },
-    onUpdate: ({ editor }) =>
-      onChange(editor.getText({ blockSeparator: "\n\n" })),
+    content: version.document || plainDocument(version.body),
+    onUpdate: ({ editor }) => onChange(editor.getJSON() as RichDocument),
     editorProps: {
       attributes: {
         "aria-label": "Content editor",
@@ -186,6 +197,7 @@ function RichEditor({
           variant="ghost"
           size="icon"
           aria-label="Bold"
+          aria-pressed={editor?.isActive("bold") || false}
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
           <Bold size={15} />
@@ -194,6 +206,7 @@ function RichEditor({
           variant="ghost"
           size="icon"
           aria-label="Italic"
+          aria-pressed={editor?.isActive("italic") || false}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
           <Italic size={15} />
@@ -202,6 +215,7 @@ function RichEditor({
           variant="ghost"
           size="icon"
           aria-label="Bullet list"
+          aria-pressed={editor?.isActive("bulletList") || false}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
           <List size={15} />
@@ -215,7 +229,7 @@ function RichEditor({
           <Undo2 size={15} />
         </Button>
         <small>
-          Saved as plain text; evidence is re-extracted after editing.
+          Formatting is saved. Each new version needs its own evidence review.
         </small>
       </div>
       <EditorContent editor={editor} />
@@ -233,7 +247,8 @@ export default function ContentStudio({ id }: { id: string | null }) {
   const [artifactId, setArtifactId] = useState("");
   const [versionId, setVersionId] = useState("");
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState<RichDocument | null>(null);
+  const [editBase, setEditBase] = useState<Version | null>(null);
   const [compare, setCompare] = useState(false);
   const [comment, setComment] = useState("");
   const [quote, setQuote] = useState("");
@@ -254,12 +269,16 @@ export default function ContentStudio({ id }: { id: string | null }) {
     await client.invalidateQueries({ queryKey: ["runs"] });
   }
   async function save() {
-    if (!version || !artifact) return;
+    if (!version || !artifact || !draft || !editBase) return;
     setBusy(true);
     try {
       await api(`/artifacts/${artifact.id}`, {
         method: "PUT",
-        body: JSON.stringify({ body: draft, base_version: versions[0].number }),
+        body: JSON.stringify({
+          body: documentText(draft),
+          document: draft,
+          base_version: editBase.number,
+        }),
       });
       setEditing(false);
       setVersionId("");
@@ -364,7 +383,10 @@ export default function ContentStudio({ id }: { id: string | null }) {
                         size="sm"
                         onClick={() => {
                           setEditing(!editing);
-                          setDraft(version.body);
+                          setDraft(
+                            version.document || plainDocument(version.body),
+                          );
+                          setEditBase(version);
                           setCompare(false);
                         }}
                       >
@@ -382,19 +404,27 @@ export default function ContentStudio({ id }: { id: string | null }) {
               </div>
               {editing ? (
                 <RichEditor
-                  key={version.id}
-                  version={version}
+                  key={editBase?.id || version.id}
+                  version={editBase || version}
                   onChange={setDraft}
                 />
               ) : compare && previous ? (
                 <div className="compare-view">
                   <div>
                     <h3>Version {previous.number} · Previous</h3>
-                    <pre>{previous.body}</pre>
+                    {previous.document ? (
+                      <RichDocumentView document={previous.document} />
+                    ) : (
+                      <pre>{previous.body}</pre>
+                    )}
                   </div>
                   <div>
                     <h3>Version {version.number} · Selected</h3>
-                    <pre>{version.body}</pre>
+                    {version.document ? (
+                      <RichDocumentView document={version.document} />
+                    ) : (
+                      <pre>{version.body}</pre>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -409,7 +439,11 @@ export default function ContentStudio({ id }: { id: string | null }) {
                       setQuote(selected);
                   }}
                 >
-                  {version.body}
+                  {version.document ? (
+                    <RichDocumentView document={version.document} />
+                  ) : (
+                    version.body
+                  )}
                 </div>
               )}
               <div className="document-bottom">

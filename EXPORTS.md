@@ -44,3 +44,7 @@ GET /api/workflows/{run_id}/export?format=zip
 ```
 
 The authenticated owner receives `application/zip` with the filename `contentforge-campaign.zip`. The endpoint uses the same approval checks as Markdown and JSON: execution must be completed and the current version set must exactly match the approval record. A missing or outdated approval returns HTTP 409. Another workspace cannot download the campaign.
+
+## Saved rich-text versions
+
+Approved human-edited versions may contain a validated `document` tree alongside `body`. The body is the canonical plain text for claim offsets and quotes. Markdown documents render the supported bold/italic marks and bullet lists, escaping literal HTML and Markdown punctuation from text nodes. JSON retains both representations. Legacy versions with a null document continue to export their original body unchanged. Each approval still pins exact immutable version IDs; formatting never carries approval or evidence status to a later version.

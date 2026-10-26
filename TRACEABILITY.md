@@ -33,3 +33,7 @@ ZIP exports package only those approved versions. Their evidence file includes c
 ## Demonstration evidence
 
 The EV demonstration seeds two local sample reference documents. It deliberately includes an unsupported range statement and a lifecycle-emission overclaim in the first draft. The quality loop requests a revision, removes those statements, retains the original version and evidence, and asks for human approval. Sample source agreement must not be presented as independent research or an official citation.
+
+## Formatting and Unicode offsets
+
+Rich-text versions store supported formatting separately from canonical `body` text. Paragraphs are flattened in document order with two newline characters between them; hard line breaks contribute one newline. The API requires the document and body to match. Claims and comments refer to this canonical text, and formatting-only saves still create a new version requiring evidence review. Evidence highlights use Unicode code-point offsets to match Python extraction, including when emoji precede a claim.
