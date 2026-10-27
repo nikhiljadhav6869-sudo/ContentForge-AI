@@ -347,6 +347,15 @@ export default function Studio() {
             transition={{ duration: 0.18 }}
             className={`page-content ${pathname.startsWith("/control") ? "control-page" : ""}`}
           >
+            {preferences.data?.demo_only && (
+              <div className="demo-banner" role="status">
+                <Sparkles size={14} />
+                <span>
+                  <strong>Demo-only hosting</strong> · Live AI is disabled.
+                  Download your work before leaving; demo data may reset.
+                </span>
+              </div>
+            )}
             {pathname === "/dashboard" ? (
               <Dashboard />
             ) : pathname === "/workflows/new" ? (

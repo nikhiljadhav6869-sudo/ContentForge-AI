@@ -1,5 +1,7 @@
 # Deployment
 
+For a free portfolio demo with temporary SQLite data and no live AI/email, use [FREE_HOSTING.md](FREE_HOSTING.md). The root Dockerfile packages that profile; the Compose instructions below deploy the full PostgreSQL/Redis application.
+
 ## Local Docker Compose
 
 ```bash

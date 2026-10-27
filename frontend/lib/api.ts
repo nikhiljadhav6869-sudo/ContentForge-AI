@@ -188,6 +188,7 @@ export type Preferences = {
   max_revisions: number;
 };
 export type Settings = {
+  demo_only?: boolean;
   preferences: Preferences;
   providers: Record<string, boolean>;
   models: Record<string, string>;

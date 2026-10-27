@@ -7,7 +7,7 @@ Rich-text persistence, Unicode evidence highlighting, provider diagnostics, back
 | Check | Result |
 | --- | --- |
 | Frozen installation, `./scripts/install.sh` | Passed: Python and npm dependencies, migrations, checkpoint initialization |
-| Backend, `.venv/bin/pytest -q` | 312 passed with the dedicated Redis integration URL configured |
+| Backend, `.venv/bin/pytest -q` | 328 passed with the dedicated Redis integration URL configured |
 | Python diagnostics, `.venv/bin/ruff check app tests` | Passed |
 | Deployment preflight against local Compose | Database, migrations, checkpoints, Redis, and worker checks passed; five expected public-configuration failures for local demo settings |
 | Production Compose merge and Caddy configuration | Passed: only proxy publishes ports; secure cookies/HTTPS/no guests enforced; registration closed by default with explicit opt-in tested; separate volumes; Caddy previously validated with network disabled |
@@ -165,3 +165,13 @@ A separate temporary Docker stack exercised the actual Caddy configuration and A
 The updated PostgreSQL/Redis stack passed the full demo smoke: ten agents, 187 persisted events, four artifacts, nine ZIP members, and SSE replay. It used labeled demo outputs and made no live provider or email requests. Public DNS/ACME, deployment capacity, and an external proxy/CDN chain remain separate operator checks.
 
 All three browser journey cases passed against the updated production-built API and worker (two minutes): complete campaign editing/approval/export/calendar, guided creation and responsive layouts, and SSE replay. No frontend code changed; the preceding 31-case full/targeted UI validation remains recorded above.
+
+## Free demo hosting profile — 27 October 2026
+
+The single-container demo adds 16 backend/configuration cases: exact Space host validation, loopback-only local origins, port bounds, forced temporary SQLite/local-queue settings, disabled account registration and email, cleared provider credentials, settings visibility, rejection of live campaign creation, and gateway-level rejection of OpenAI/Gemini/Ollama even when credentials exist. The full backend run passed all 328 cases with real Redis integration enabled. Python diagnostics and frontend TypeScript checks passed.
+
+The root Dockerfile installs frozen dependencies and runs Next.js with a loopback FastAPI process under an unprivileged user. The deployment is deliberately demo-only; the ordinary Compose stack retains its existing live-provider behavior. The browser shows the profile's data-reset/export warning. The documented Space path requires the user to create an account and confirm that the selected CPU hardware is free; current provider pricing pages were blocked by the environment's outbound proxy, including a retried fetch. No public hosting account, paid service, or Space was created.
+
+The final single-container image built successfully after unused Docker build cache was cleared to resolve workspace disk exhaustion. It was run locally with two CPUs and a 2 GiB memory limit. The end-to-end smoke passed using SQLite and the local thread pool: ten agents, 187 events, four artifacts, nine ZIP members, and persisted SSE replay. Runtime checks confirmed that registration and all live providers remain disabled even when a synthetic provider key is injected into the container environment.
+
+All four browser checks passed against this image (1.7 minutes): the new demo-hosting notice at desktop/mobile widths plus complete campaign editing/approval/export/calendar, guided creation/responsive layout, and SSE replay. Graceful container shutdown returned exit 0, restarting the same local container restored its healthy endpoint, and terminating the web child caused the supervisor to stop the container with exit 1. The disposable validation container was removed. The existing PostgreSQL/Redis stack and its data were retained. Public Space provisioning, actual hosted HTTPS, embedded-frame behavior, free-tier sleep/wake, and storage-reset policies have not been tested; follow FREE_HOSTING.md and verify the selected host's current $0 offering before upload.

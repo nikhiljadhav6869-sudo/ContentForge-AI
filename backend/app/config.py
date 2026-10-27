@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     redis_url: str = ""
     frontend_origin: str = "http://localhost:3000"
     demo_auth: bool = True
+    demo_only: bool = False
     registration_enabled: bool = True
     workflow_daily_limit: int = Field(default=50, ge=0, le=100000)
     workflow_concurrency_limit: int = Field(default=2, ge=1, le=20)

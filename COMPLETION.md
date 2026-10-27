@@ -40,7 +40,11 @@ npm run test:e2e
 
 Use `PLAYWRIGHT_BASE_URL` when the web service uses a port other than 3000. Recorded validation ran against the workspace's production-built Compose services on port 3100; this is a local test deployment, not a public site.
 
-## External launch dependencies
+## Free portfolio-demo option
+
+For a zero-service-fee demonstration, [FREE_HOSTING.md](FREE_HOSTING.md) describes the single-container Hugging Face Docker Space profile. It uses SQLite and the local executor, disables live models/email/registration, and warns that data may reset. The user must create a Space and select hardware explicitly listed as $0/free; current provider pricing/account eligibility could not be verified from this environment. No public Space has been created here. The image and upload instructions are included in the repository. A public hosting account, upload, and hosted verification are the remaining steps for this demo option; paid AI, SMTP, and a custom domain are not prerequisites.
+
+## Full production launch dependencies
 
 The following cannot be established by generating more repository files:
 

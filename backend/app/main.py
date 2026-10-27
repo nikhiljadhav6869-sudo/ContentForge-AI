@@ -301,6 +301,7 @@ def get_settings(who=Depends(identity)):
         "models": {"openai": settings.openai_model, "gemini": settings.gemini_model, "ollama": settings.ollama_model},
         "source_hosts": settings.source_hosts.split(","),
         "demo_auth": settings.demo_auth,
+        "demo_only": settings.demo_only,
     }
 
 

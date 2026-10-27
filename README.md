@@ -1,3 +1,14 @@
+---
+title: ContentForge AI
+emoji: ✍️
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: Multi-agent content workflow with evidence and human review
+---
+
 # ContentForge AI
 
 **From an idea to verified content. Powered by collaborating AI agents.**
@@ -7,6 +18,8 @@ A multi-agent content workspace built with Next.js, FastAPI, and LangGraph. Foll
 > “Supported” means a claim has linked textual evidence. It is not an independent guarantee of factual truth. The no-key demo uses clearly labeled sample references and curated outputs.
 
 ## Start in three commands
+
+**Want a free public portfolio demo?** See [FREE_HOSTING.md](FREE_HOSTING.md) for the single-container Hugging Face Spaces setup. It uses the no-key demo, disables live AI/email, and stores temporary data. The root Dockerfile is for that profile; the Compose deployment below remains the full PostgreSQL/Redis option.
 
 Requires Docker Engine and Docker Compose v2.
 
