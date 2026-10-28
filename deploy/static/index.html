@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ContentForge AI by Nikhil Jadhav: a multi-agent content pipeline with evidence tracking, versioned editing, and human approval. Explore the project and run its full demo locally.">
+  <meta name="color-scheme" content="dark">
+  <title>ContentForge AI · Project showcase</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b101b;--panel:#121a2a;--line:#293449;--text:#f3f5fc;--muted:#aebbd1;--accent:#b3a5ff;--green:#8ae8c0}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:radial-gradient(ellipse at 85% 5%,#292345 0,transparent 38%),var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:inherit;text-underline-offset:4px}a:hover{color:var(--green)}a:focus-visible,summary:focus-visible{outline:3px solid var(--green);outline-offset:5px}main,header,footer{max-width:1160px;margin:auto;padding:0 28px}.skip{position:absolute;left:16px;top:-80px;padding:10px;background:var(--panel);z-index:2}.skip:focus{top:10px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:27px;padding-bottom:27px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:750;letter-spacing:-.6px;font-size:21px}.logo{display:grid;place-items:center;width:36px;height:36px;border:1px solid #a899ff;border-radius:10px;background:#292344;color:#d8d0ff;font-size:22px}.brand em{font-style:normal;color:var(--accent)}nav{display:flex;flex-wrap:wrap;gap:24px;font-size:14px}nav a{text-decoration:none;color:var(--muted)}
+    .notice{margin:28px 0 0;padding:12px 17px;border:1px solid #3c4265;border-radius:10px;background:#191d31;color:#d5d9ef;font-size:13px}.notice strong{color:#e7e1ff}.hero{display:grid;grid-template-columns:1.15fr 1fr;gap:52px;align-items:center;padding:70px 0 64px}.eyebrow{text-transform:uppercase;letter-spacing:2px;color:var(--green);font-size:12px;font-weight:700}.hero h1{font-size:clamp(38px,5.3vw,64px);line-height:1.08;letter-spacing:-2.5px;margin:19px 0 22px}.hero h1 span{color:var(--accent)}.lead{font-size:17px;color:var(--muted);max-width:560px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.button{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border:1px solid #8070d5;border-radius:9px;padding:11px 18px;font-weight:650;font-size:14px;background:#b3a5ff;color:#141025}.button:hover{background:#c9bfff;color:#141025}.button.secondary{background:transparent;border-color:var(--line);color:var(--text)}.button.secondary:hover{border-color:var(--accent);color:var(--accent)}.small{font-size:13px;color:var(--muted)}
+    .diagram{border:1px solid #41445e;border-radius:18px;background:linear-gradient(145deg,#1c2437,#111827);padding:24px;box-shadow:0 24px 70px #0004}.diagram-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:22px}.diagram-head strong{font-size:14px}.label{font-size:11px;padding:3px 8px;border:1px solid #45415e;border-radius:20px;color:#d1c9ef;white-space:nowrap}.stage{padding:12px 16px;border:1px solid var(--line);border-radius:9px;background:#0d1421;font-size:13px}.stage strong{display:block;color:#e7e9f5}.stage span{color:var(--muted);font-size:12px}.connector{text-align:center;color:#b3a5ff;line-height:26px}.branches{display:grid;grid-template-columns:1fr 1fr;gap:10px}.human{border-color:#487261;background:#122721}.human strong{color:var(--green)}.diagram-caption{margin:18px 0 0;font-size:12px;color:var(--muted)}
+    section{padding:48px 0;border-top:1px solid var(--line)}h2{font-size:30px;line-height:1.2;letter-spacing:-.8px;margin:10px 0 14px}h3{font-size:17px;margin:0 0 8px}.intro{max-width:700px;color:var(--muted);margin-bottom:26px}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.feature{padding:24px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}.feature .number{color:var(--accent);font-size:12px;letter-spacing:1px;display:block;margin-bottom:18px}.feature p{font-size:14px;color:var(--muted);margin:0}.formats{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.pill{border:1px solid var(--line);border-radius:7px;padding:5px 11px;font-size:12px;color:#ced7e8}
+    .roles{display:grid;grid-template-columns:1fr 1fr;gap:10px}details{border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:0 16px}summary{padding:13px 0;cursor:pointer;font-size:14px;font-weight:600}summary::marker{color:var(--accent)}details p{margin:0 0 17px;color:var(--muted);font-size:14px}.run{display:grid;grid-template-columns:1fr 1.15fr;gap:35px;align-items:start}.commands{margin:0;border:1px solid var(--line);border-radius:12px;padding:22px;background:#080d16;overflow:auto;font:13px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;color:#c6f3e0;max-width:100%}.run p{color:var(--muted)}.stack{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.stack span{color:var(--muted);font-size:12px;padding:4px 9px;background:#182132;border-radius:5px}footer{border-top:1px solid var(--line);padding-top:24px;padding-bottom:30px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+    .run>div,.hero>div{min-width:0}
+    @media(max-width:800px){.hero{grid-template-columns:1fr;gap:30px;padding:42px 0}.hero h1{max-width:600px}.features{grid-template-columns:1fr}.run{grid-template-columns:1fr}.diagram{max-width:580px}.roles{grid-template-columns:1fr}}
+    @media(max-width:450px){main,header,footer{padding-left:18px;padding-right:18px}header{align-items:flex-start;flex-direction:column;gap:14px}nav{gap:20px}.hero h1{font-size:40px;letter-spacing:-1.5px}.diagram{padding:17px}.branches{gap:7px}.stage{padding:10px}.notice{font-size:12px}h2{font-size:27px}.commands{font-size:12px}.diagram-head{flex-wrap:wrap}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header>
+    <a class="brand" href="#main" aria-label="ContentForge AI home"><span class="logo" aria-hidden="true">F</span>ContentForge <em>AI</em></a>
+    <nav aria-label="Main navigation"><a href="#features">Features</a><a href="#agents">The agents</a><a href="https://github.com/nikhiljadhav6869-sudo/ContentForge-AI">GitHub</a></nav>
+  </header>
+  <main id="main">
+    <div class="notice"><strong>Static project showcase.</strong> No AI generation, backend, accounts, or saved campaigns run on this page. Run the full application locally to try the workflow.</div>
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Built by Nikhil Jadhav</div>
+        <h1>Good content.<br>Clear evidence.<br><span>A human final say.</span></h1>
+        <p class="lead">Meet ContentForge AI: a multi-agent workspace that connects research, writing, evidence review, and approval in one inspectable content pipeline.</p>
+        <div class="actions"><a class="button" href="https://github.com/nikhiljadhav6869-sudo/ContentForge-AI">Explore the source</a><a class="button secondary" href="#run-locally">Run the full demo</a></div>
+        <p class="small">Open project · No-key local demo available</p>
+      </div>
+      <div class="diagram" aria-label="Conceptual workflow: a brief goes through research, strategy, drafting and evidence review, then human approval before export">
+        <div class="diagram-head"><strong>From brief to approved content</strong><span class="label">Architecture illustration</span></div>
+        <div class="stage"><strong>Your content brief</strong><span>Audience · tone · platforms · sources</span></div>
+        <div class="connector" aria-hidden="true">↓</div>
+        <div class="branches"><div class="stage"><strong>Research</strong><span>Stored source passages</span></div><div class="stage"><strong>Strategy</strong><span>Angle and outline</span></div></div>
+        <div class="connector" aria-hidden="true">↓</div>
+        <div class="stage"><strong>Draft → inspect → revise</strong><span>Writing, evidence, brand, channels, and quality</span></div>
+        <div class="connector" aria-hidden="true">↓</div>
+        <div class="stage human"><strong>Human review &amp; approval</strong><span>Approve the exact versions before export</span></div>
+        <p class="diagram-caption">Conceptual flow, not a running campaign or live agent status.</p>
+      </div>
+    </div>
+    <section id="features">
+      <div class="eyebrow">Inside the full application</div><h2>Every draft has a review trail.</h2>
+      <p class="intro">Explore these features in the repository or local application. This static page explains the project without connecting to a server.</p>
+      <div class="features">
+        <article class="feature"><span class="number">01 / ORCHESTRATION</span><h3>Follow the agent team</h3><p>A LangGraph workflow coordinates ten roles. The application visualizes real execution events, agent inputs and outputs, revisions, and human review.</p></article>
+        <article class="feature"><span class="number">02 / EVIDENCE</span><h3>Inspect the claims</h3><p>Trace claims to stored passages, inspect evidence assessments, and review warnings. Evidence matching is a transparent heuristic, not independent fact certification.</p></article>
+        <article class="feature"><span class="number">03 / EDITORIAL CONTROL</span><h3>Approve what gets exported</h3><p>Edit versioned drafts with formatting, review each version’s evidence, and export approved content as Markdown, JSON, or a ZIP package.</p></article>
+      </div>
+      <div class="formats" aria-label="Content formats supported by the full application"><span class="pill">Blog articles</span><span class="pill">LinkedIn posts</span><span class="pill">Instagram captions</span><span class="pill">YouTube scripts</span></div>
+    </section>
+    <section id="agents">
+      <div class="eyebrow">Ten specialist roles</div><h2>Open a role to see its responsibility.</h2>
+      <p class="intro">These descriptions explain the implementation. Opening a card does not start an agent or make an AI request.</p>
+      <div class="roles">
+        <details><summary>01 · Supervisor</summary><p>Turns the brief and constraints into a bounded execution plan. The graph owns routing; model outputs cannot invoke arbitrary tools.</p></details>
+        <details><summary>02 · Research</summary><p>Reads stored source passages and identifies relevant findings, source references, and gaps. Autonomous web search is outside the current implementation.</p></details>
+        <details><summary>03 · Strategy</summary><p>Shapes the campaign’s angle, outline, audience, and tone from the brief and its constraints.</p></details>
+        <details><summary>04 · Writer</summary><p>Creates the requested platform drafts using the strategy and available evidence, and responds to revision feedback.</p></details>
+        <details><summary>05 · Fact Checker</summary><p>Extracts claims and conservatively matches them to passages. Missing or conflicting evidence stays visible for review.</p></details>
+        <details><summary>06 · Editor</summary><p>Refines complete drafts and records editorial notes while preserving version history.</p></details>
+        <details><summary>07 · Brand Guardian</summary><p>Checks drafts against the brand profile and adjusts their voice and presentation.</p></details>
+        <details><summary>08 · SEO &amp; Channels</summary><p>Adapts drafts and metadata for the selected content platforms. It does not publish to social networks.</p></details>
+        <details><summary>09 · Quality</summary><p>Uses an explainable rubric and bounded revision routing. A high score does not remove factual warnings.</p></details>
+        <details><summary>10 · Export</summary><p>Packages the exact versions approved by a person, with evidence references and checksums. Calendar entries are reminders, not automatic publication.</p></details>
+      </div>
+    </section>
+    <section id="run-locally" class="run">
+      <div><div class="eyebrow">Try the working software</div><h2>Run the no-key demo on your computer.</h2><p>Install Git and Docker with Linux containers, then use these commands. Open <strong>http://localhost:7860</strong> and choose <strong>Explore the live demo</strong>.</p><p class="small">The demo runs real orchestration with labeled sample outputs. Live AI and email are disabled. This temporary container loses its saved data when removed—download your work first.</p><a href="https://github.com/nikhiljadhav6869-sudo/ContentForge-AI/blob/main/README.md">Read the full setup guide</a></div>
+      <div><pre class="commands"><code>git clone https://github.com/nikhiljadhav6869-sudo/ContentForge-AI.git
+cd ContentForge-AI
+docker build -t contentforge-demo .
+docker run --rm -p 127.0.0.1:7860:7860 contentforge-demo</code></pre><div class="stack" aria-label="Full application technology stack"><span>Next.js</span><span>FastAPI</span><span>LangGraph</span><span>PostgreSQL / SQLite</span><span>Redis / local executor</span><span>Docker</span></div></div>
+    </section>
+  </main>
+  <footer><span>ContentForge AI · Created by Nikhil Jadhav</span><a href="https://github.com/nikhiljadhav6869-sudo/ContentForge-AI">Project source and documentation</a></footer>
+</body>
+</html>

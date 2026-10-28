@@ -1,6 +1,6 @@
 # Deployment
 
-For a free portfolio demo with temporary SQLite data and no live AI/email, use [FREE_HOSTING.md](FREE_HOSTING.md). The root Dockerfile packages that profile; the Compose instructions below deploy the full PostgreSQL/Redis application.
+For a free public Static Space showcase, use [FREE_HOSTING.md](FREE_HOSTING.md). Static hosting does not run the backend. The root Dockerfile runs the full no-key demo locally or on a Docker-capable host; the user’s current Hugging Face screen marks Docker hosting as paid. The Compose instructions below deploy the persistent PostgreSQL/Redis application.
 
 ## Local Docker Compose
 

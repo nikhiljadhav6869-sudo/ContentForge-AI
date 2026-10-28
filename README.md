@@ -1,14 +1,3 @@
----
-title: ContentForge AI
-emoji: ✍️
-colorFrom: blue
-colorTo: purple
-sdk: docker
-app_port: 7860
-pinned: false
-short_description: Multi-agent content workflow with evidence and human review
----
-
 # ContentForge AI
 
 **From an idea to verified content. Powered by collaborating AI agents.**
@@ -19,7 +8,7 @@ A multi-agent content workspace built with Next.js, FastAPI, and LangGraph. Foll
 
 ## Start in three commands
 
-**Want a free public portfolio demo?** See [FREE_HOSTING.md](FREE_HOSTING.md) for the single-container Hugging Face Spaces setup. It uses the no-key demo, disables live AI/email, and stores temporary data. The root Dockerfile is for that profile; the Compose deployment below remains the full PostgreSQL/Redis option.
+**Want a free public showcase?** See [FREE_HOSTING.md](FREE_HOSTING.md) for the single-file Static Space page. The user’s hosting screen on 28 October 2026 marks Docker/Gradio Spaces as paid; Static cannot run this application’s backend. The full no-key demo can run on your computer using the [standalone Docker profile](deploy/space/README.md). The Compose deployment below remains the PostgreSQL/Redis option.
 
 Requires Docker Engine and Docker Compose v2.
 

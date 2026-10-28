@@ -40,9 +40,11 @@ npm run test:e2e
 
 Use `PLAYWRIGHT_BASE_URL` when the web service uses a port other than 3000. Recorded validation ran against the workspace's production-built Compose services on port 3100; this is a local test deployment, not a public site.
 
-## Free portfolio-demo option
+## Free public showcase and local demo
 
-For a zero-service-fee demonstration, [FREE_HOSTING.md](FREE_HOSTING.md) describes the single-container Hugging Face Docker Space profile. It uses SQLite and the local executor, disables live models/email/registration, and warns that data may reset. The user must create a Space and select hardware explicitly listed as $0/free; current provider pricing/account eligibility could not be verified from this environment. No public Space has been created here. The image and upload instructions are included in the repository. A public hosting account, upload, and hosted verification are the remaining steps for this demo option; paid AI, SMTP, and a custom domain are not prerequisites.
+The user's 28 October 2026 hosting screen marks Docker/Gradio Spaces as paid and Static as free. [FREE_HOSTING.md](FREE_HOSTING.md) now uses `deploy/static/index.html` for the free public showcase. This page explains the project and links to its source/local-run instructions; it does not execute agents, authenticate visitors, or store campaigns. The existing NJ027/contentforge-ai Space requires replacing its starter index.html with the prepared file. No remote upload is claimed here.
+
+The root Dockerfile remains a tested way to run the full no-key demo on the user's computer. It uses SQLite and the local executor, disables live AI/email/registration, and keeps temporary data. This does not supply public full-app hosting. The Docker profile README is separate from the free Static profile so its SDK metadata cannot accidentally switch the free Space to paid compute.
 
 ## Full production launch dependencies
 

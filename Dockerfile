@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Single-container, no-key portfolio demo for Hugging Face Docker Spaces.
+# Single-container, no-key demo for local use or a Docker-capable host.
+# Hosted Docker plans may be paid; use deploy/static for a free Static Space.
 # The full PostgreSQL/Redis deployment continues to use compose.yaml.
 FROM node:22-bookworm-slim AS web-dependencies
 WORKDIR /web
